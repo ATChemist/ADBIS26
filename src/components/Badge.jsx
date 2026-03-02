@@ -12,7 +12,7 @@ export function Badge({ tone = "neutral", className, children }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold",
+        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold tracking-wide",
         toneClasses[tone] ?? toneClasses.neutral,
         className
       )}

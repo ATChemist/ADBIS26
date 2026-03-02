@@ -3,13 +3,13 @@ import { cn } from "../utils/cn";
 
 const variantClasses = {
   primary:
-    "bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md focus-visible:ring-brand-600 disabled:bg-brand-300",
+    "bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] text-white shadow-sm hover:brightness-105 hover:shadow-md focus-visible:ring-brand-600 disabled:bg-brand-300",
   secondary:
     "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 focus-visible:ring-brand-500 disabled:text-slate-400 disabled:bg-slate-100",
   tertiary:
     "bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-brand-500 disabled:text-slate-400 disabled:bg-slate-100",
   danger:
-    "bg-danger-600 text-white shadow-sm hover:bg-danger-700 hover:shadow-md focus-visible:ring-danger-600 disabled:bg-danger-300"
+    "bg-[linear-gradient(135deg,#dc2626,#b91c1c)] text-white shadow-sm hover:brightness-105 hover:shadow-md focus-visible:ring-danger-600 disabled:bg-danger-300"
 };
 
 const sizeClasses = {
@@ -32,7 +32,7 @@ export function Button({
       {...props}
       disabled={props.disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition duration-200 hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:hover:translate-y-0",
         variantClasses[variant] ?? variantClasses.primary,
         sizeClasses[size] ?? sizeClasses.md,
         className

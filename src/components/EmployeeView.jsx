@@ -32,16 +32,18 @@ export function EmployeeView({
 
   const canPause = employee.status !== "busy";
   const pauseLabel = employee.status === "break" ? "Afslut pause" : "Pause";
+
   const criticalCount = nextTasks.filter((task) => task.priority === "crit").length;
+  const helpCount = nextTasks.filter((task) => task.status === "help_needed").length;
 
   return (
-    <section className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+    <section className="grid gap-4 2xl:grid-cols-[1.42fr_0.92fr]">
       <div className="space-y-4">
         <Card className="overflow-hidden p-0">
-          <div className="border-b border-slate-100 bg-[linear-gradient(130deg,rgba(37,99,235,0.08),transparent_58%)] p-4 md:p-5">
+          <div className="border-b border-slate-100 bg-[linear-gradient(120deg,rgba(37,99,235,0.12),transparent_52%)] p-4 md:p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-caption uppercase tracking-[0.14em]">Medarbejder</p>
+                <p className="text-caption uppercase tracking-[0.16em]">Medarbejderprofil</p>
                 <h2 className="text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">
                   {employee.name}
                 </h2>
@@ -50,27 +52,23 @@ export function EmployeeView({
               <Badge tone={employeeStatus.tone}>{employeeStatus.label}</Badge>
             </div>
           </div>
-          <div className="grid gap-2 p-4 text-xs text-slate-600 md:grid-cols-3 md:p-5">
-            <div className="surface-soft p-3">
-              <p className="text-caption">Åbne opgaver</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900">{nextTasks.length}</p>
-            </div>
-            <div className="surface-soft p-3">
-              <p className="text-caption">Kritiske opgaver</p>
-              <p className="mt-1 text-lg font-semibold text-danger-700">{criticalCount}</p>
-            </div>
-            <div className="surface-soft p-3">
-              <p className="text-caption">Anbefalet handling</p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">
-                {focusTask ? primaryLabel : "Afvent ny opgave"}
-              </p>
-            </div>
+
+          <div className="grid gap-2 p-4 text-xs md:grid-cols-4 md:p-5">
+            <StatTile label="Opgaver i kø" value={nextTasks.length} tone="neutral" />
+            <StatTile label="Kritiske" value={criticalCount} tone={criticalCount > 0 ? "danger" : "success"} />
+            <StatTile label="Afventer hjælp" value={helpCount} tone={helpCount > 0 ? "warning" : "neutral"} />
+            <StatTile
+              label="Næste handling"
+              value={focusTask ? primaryLabel : "Afvent"}
+              tone="neutral"
+              isText
+            />
           </div>
         </Card>
 
         <Card
           title={activeTask ? "Aktiv opgave" : "Næste opgave"}
-          subtitle={loadingLabel && loadingTaskId ? loadingLabel : "Klar næste handling med ét klik"}
+          subtitle={loadingLabel && loadingTaskId ? loadingLabel : "Klart handlingskort"}
         >
           {loadingTaskId && focusTask && loadingTaskId === focusTask.id ? (
             <SkeletonLoader rows={4} />
@@ -102,6 +100,7 @@ export function EmployeeView({
               ) : (
                 <ChevronDown className="h-4 w-4" aria-hidden="true" />
               )}
+              {isNextTasksOpen ? "Skjul" : "Vis"}
             </Button>
           }
         >
@@ -128,13 +127,13 @@ export function EmployeeView({
         </Card>
       </div>
 
-      <aside className="space-y-4 xl:sticky xl:top-28 xl:self-start">
+      <aside className="space-y-4 2xl:sticky 2xl:top-28 2xl:self-start">
         <Card
           title="Hurtige handlinger"
-          subtitle="Maks 2-3 handlinger pr. skærm"
-          className="bg-white/95"
+          subtitle="Optimeret til tablet-touch"
+          className="overflow-hidden p-0"
         >
-          <div className="grid gap-2">
+          <div className="grid gap-2 p-4">
             <Button
               aria-label={primaryLabel}
               icon={primaryLabel === "Start opgave" ? Play : SquareCheckBig}
@@ -166,16 +165,37 @@ export function EmployeeView({
               {pauseLabel}
             </Button>
           </div>
+          <div className="border-t border-slate-100 bg-slate-50/80 px-4 py-3 text-xs text-slate-500">
+            Tip: Ved kapacitetspres, brug altid "Brug for hjælp" i stedet for at udskyde opgaven.
+          </div>
         </Card>
 
-        <Card title="Guidance" subtitle="Forudsigeligt flow i travle perioder" className="bg-slate-50/90">
-          <ul className="space-y-2 text-sm text-slate-600">
-            <li className="surface-soft px-3 py-2">1. Start højeste prioritet først.</li>
-            <li className="surface-soft px-3 py-2">2. Bed om hjælp ved kapacitetspres.</li>
-            <li className="surface-soft px-3 py-2">3. Brug pause kun når køen er stabil.</li>
-          </ul>
+        <Card title="Klinisk flow" subtitle="Standardiseret arbejdssekvens" className="bg-slate-50/90">
+          <ol className="space-y-2 text-sm text-slate-600">
+            <li className="surface-quiet px-3 py-2">1. Vælg næste opgave med højeste prioritet.</li>
+            <li className="surface-quiet px-3 py-2">2. Start opgaven og udfør prøveforløb.</li>
+            <li className="surface-quiet px-3 py-2">3. Markér færdig eller anmod om hjælp ved behov.</li>
+          </ol>
         </Card>
       </aside>
     </section>
+  );
+}
+
+function StatTile({ label, value, tone = "neutral", isText = false }) {
+  const toneClass =
+    tone === "danger"
+      ? "text-danger-700"
+      : tone === "warning"
+      ? "text-warning-700"
+      : tone === "success"
+      ? "text-success-700"
+      : "text-slate-900";
+
+  return (
+    <div className="surface-soft p-3">
+      <p className="text-caption">{label}</p>
+      <p className={`mt-1 font-semibold ${isText ? "text-sm" : "text-xl"} ${toneClass}`}>{value}</p>
+    </div>
   );
 }

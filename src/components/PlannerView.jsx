@@ -78,56 +78,49 @@ export function PlannerView({
       </div>
 
       <Card
-        title="Filtre"
-        subtitle="Afdeling, prioritet, status og søgning"
+        title="Filtrering"
+        subtitle="Fokuser hurtigt på afdeling, prioritet og status"
         actions={
           <Button variant="secondary" size="sm" aria-label="Nulstil filtre" onClick={resetFilters}>
             Nulstil
           </Button>
         }
       >
-        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1.3fr]">
-          <div className="space-y-2">
-            <p className="text-caption">Afdeling</p>
-            <div className="flex flex-wrap gap-2">
+        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1.4fr]">
+          <FilterBlock title="Afdeling">
+            <FilterChip
+              active={filters.department === "all"}
+              label="Alle"
+              onClick={() => onFilterChange({ department: "all" })}
+            />
+            {departments.map((department) => (
               <FilterChip
-                active={filters.department === "all"}
-                label="Alle"
-                onClick={() => onFilterChange({ department: "all" })}
+                key={department.id}
+                active={filters.department === department.id}
+                label={department.name}
+                onClick={() => onFilterChange({ department: department.id })}
               />
-              {departments.map((department) => (
-                <FilterChip
-                  key={department.id}
-                  active={filters.department === department.id}
-                  label={department.name}
-                  onClick={() => onFilterChange({ department: department.id })}
-                />
-              ))}
-            </div>
-          </div>
+            ))}
+          </FilterBlock>
+
+          <FilterBlock title="Prioritet">
+            <FilterChip
+              active={filters.priority === "all"}
+              label="Alle"
+              onClick={() => onFilterChange({ priority: "all" })}
+            />
+            {Object.entries(PRIORITY_META).map(([id, meta]) => (
+              <FilterChip
+                key={id}
+                active={filters.priority === id}
+                label={meta.label}
+                onClick={() => onFilterChange({ priority: id })}
+              />
+            ))}
+          </FilterBlock>
 
           <div className="space-y-2">
-            <p className="text-caption">Prioritet</p>
-            <div className="flex flex-wrap gap-2">
-              <FilterChip
-                active={filters.priority === "all"}
-                label="Alle"
-                onClick={() => onFilterChange({ priority: "all" })}
-              />
-              {Object.entries(PRIORITY_META).map(([id, meta]) => (
-                <FilterChip
-                  key={id}
-                  active={filters.priority === id}
-                  label={meta.label}
-                  onClick={() => onFilterChange({ priority: id })}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-caption">Status + søgning</p>
-            <div className="flex flex-wrap gap-2">
+            <FilterBlock title="Status">
               {statusFilters.map((statusFilter) => (
                 <FilterChip
                   key={statusFilter.id}
@@ -136,8 +129,8 @@ export function PlannerView({
                   onClick={() => onFilterChange({ status: statusFilter.id })}
                 />
               ))}
-            </div>
-            <label className="relative mt-2 block">
+            </FilterBlock>
+            <label className="relative block">
               <Search
                 className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400"
                 aria-hidden="true"
@@ -154,8 +147,8 @@ export function PlannerView({
         </div>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr_1.55fr]">
-        <Card title="Afsnitsoverblik" subtitle="Belastning og status" className="xl:min-h-[600px]">
+      <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr_1.65fr]">
+        <Card title="Afsnit" subtitle="Belastning og kritikalitet" className="xl:min-h-[620px]">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
             {departmentLoad.map((section) => (
               <SectionTile key={section.id} section={section} />
@@ -163,32 +156,30 @@ export function PlannerView({
           </div>
         </Card>
 
-        <Card title="Medarbejdere" subtitle="Status og aktivitetskø" className="xl:min-h-[600px]">
+        <Card title="Medarbejdere" subtitle="Status og aktivitetskø" className="xl:min-h-[620px]">
           <div className="space-y-2">
             {employees.map((employee) => {
               const status = EMPLOYEE_STATUS_META[employee.status] ?? EMPLOYEE_STATUS_META.available;
               return (
                 <article
                   key={employee.id}
-                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition hover:border-slate-300"
+                  className="surface-quiet rounded-xl px-3 py-2.5 transition hover:border-slate-300"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-slate-900">{employee.name}</p>
                     <Badge tone={status.tone}>{status.label}</Badge>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Sidste aktivitet: {formatRelative(employee.lastActiveAt, nowMs)}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Opgaver i kø: {employee.assignedTaskIds.length}
-                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                    <span className="data-pill">Aktiv: {formatRelative(employee.lastActiveAt, nowMs)}</span>
+                    <span className="data-pill">Kø: {employee.assignedTaskIds.length}</span>
+                  </div>
                 </article>
               );
             })}
           </div>
         </Card>
 
-        <Card title="Opgaveflow" subtitle="Ikke startet, i gang, afventer hjælp" className="xl:min-h-[600px]">
+        <Card title="Opgaveflow" subtitle="Ikke startet, i gang, afventer hjælp" className="xl:min-h-[620px]">
           {tasks.length === 0 ? (
             <EmptyState
               title="Ingen opgaver matcher filter"
@@ -204,6 +195,7 @@ export function PlannerView({
                 overdueTaskIds={overdueSet}
                 nowMs={nowMs}
                 onTaskClick={onTaskClick}
+                className="bg-slate-50/55"
               />
               <KanbanColumn
                 title="I gang"
@@ -213,6 +205,7 @@ export function PlannerView({
                 overdueTaskIds={overdueSet}
                 nowMs={nowMs}
                 onTaskClick={onTaskClick}
+                className="bg-brand-50/35"
               />
               <KanbanColumn
                 title="Afventer hjælp"
@@ -222,6 +215,7 @@ export function PlannerView({
                 overdueTaskIds={overdueSet}
                 nowMs={nowMs}
                 onTaskClick={onTaskClick}
+                className="bg-warning-50/35"
               />
             </div>
           )}
@@ -236,7 +230,7 @@ export function PlannerView({
             {eventLog.slice(0, 8).map((event) => (
               <li
                 key={event.id}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+                className="surface-quiet rounded-xl px-3 py-2 text-sm"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-semibold text-slate-800">{event.type}</p>
@@ -255,6 +249,15 @@ export function PlannerView({
   );
 }
 
+function FilterBlock({ title, children }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-caption">{title}</p>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
 function FilterChip({ label, active, onClick }) {
   return (
     <button
@@ -263,7 +266,7 @@ function FilterChip({ label, active, onClick }) {
       onClick={onClick}
       className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
         active
-          ? "border-brand-600 bg-brand-50 text-brand-700"
+          ? "border-brand-600 bg-brand-50 text-brand-700 shadow-sm"
           : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
       }`}
     >

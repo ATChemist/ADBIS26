@@ -5,7 +5,7 @@ export function Tabs({ tabs, value, onChange, ariaLabel = "Tabs" }) {
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
+      className="inline-flex rounded-2xl border border-slate-200 bg-white p-1 shadow-sm"
     >
       {tabs.map((tab) => {
         const isActive = value === tab.id;
@@ -19,9 +19,9 @@ export function Tabs({ tabs, value, onChange, ariaLabel = "Tabs" }) {
             tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "rounded-lg px-4 py-2 text-sm font-semibold transition duration-200",
+              "rounded-xl px-4 py-2 text-sm font-semibold transition duration-200",
               isActive
-                ? "bg-brand-600 text-white shadow-sm"
+                ? "bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] text-white shadow-sm"
                 : "text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100"
             )}
           >

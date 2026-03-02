@@ -455,12 +455,12 @@ export default function App() {
   const currentViewLabel = state.view === "employee" ? "Medarbejderflow" : "Planlægger-overblik";
   const currentViewDescription =
     state.view === "employee"
-      ? "Fokuser på næste handling med tydelige knapper og reduceret kognitiv belastning."
-      : "Styr kapacitet, prioritering og opgaveflow i et samlet kontrolrum.";
+      ? "Handlingscentreret visning med fokus på næste opgave og færre klik."
+      : "Datatæt kontrolrum til kapacitet, prioritering og opgavefordeling.";
 
   return (
-    <main className="min-h-screen">
-      <div className="mx-auto max-w-[1680px] space-y-4 p-3 md:p-6">
+    <main className="min-h-screen py-3 md:py-4">
+      <div className="mx-auto max-w-[1740px] space-y-4 p-3 md:p-6">
         <TopBar
           clockMs={clockMs}
           connectivity={state.connectivity}
@@ -469,7 +469,7 @@ export default function App() {
         />
 
         <div className="surface overflow-hidden p-0">
-          <div className="border-b border-slate-100 bg-[linear-gradient(115deg,rgba(37,99,235,0.08),transparent_45%)] p-4 md:p-5">
+          <div className="border-b border-slate-100 bg-[linear-gradient(115deg,rgba(37,99,235,0.08),transparent_48%)] p-4 md:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Tabs
                 tabs={VIEW_TABS}
@@ -482,13 +482,13 @@ export default function App() {
           </div>
           <div className="grid gap-3 p-4 md:grid-cols-[1fr_auto] md:items-center md:p-5">
             <div>
-              <p className="text-caption uppercase tracking-[0.14em]">{currentViewLabel}</p>
+              <p className="text-caption uppercase tracking-[0.16em]">{currentViewLabel}</p>
               <p className="mt-1 text-sm text-slate-600">{currentViewDescription}</p>
             </div>
             {state.ui.loadingLabel ? (
               <span className="data-pill bg-brand-50 text-brand-700">{state.ui.loadingLabel}</span>
             ) : (
-              <span className="data-pill">System responsivt</span>
+              <span className="data-pill">System klar</span>
             )}
           </div>
         </div>

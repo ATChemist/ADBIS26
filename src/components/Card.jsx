@@ -2,7 +2,7 @@ import { cn } from "../utils/cn";
 
 export function Card({ title, subtitle, actions, className, children }) {
   return (
-    <section className={cn("surface p-4 md:p-5", className)}>
+    <section className={cn("surface card-enter p-4 md:p-5", className)}>
       {(title || subtitle || actions) && (
         <header className="mb-4 flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 pb-3">
           <div>
