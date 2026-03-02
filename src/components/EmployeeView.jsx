@@ -1,104 +1,181 @@
-import { StatusBadge } from "./StatusBadge";
-
-const statusLabels = {
-  ok: "OK",
-  advarsel: "Advarsel",
-  kritisk: "Kritisk",
-  iGang: "I gang",
-  klar: "Klar"
-};
+import { ChevronDown, ChevronUp, Hand, PauseCircle, Play, SquareCheckBig } from "lucide-react";
+import { Badge } from "./Badge";
+import { Button } from "./Button";
+import { Card } from "./Card";
+import { EmptyState } from "./EmptyState";
+import { SkeletonLoader } from "./SkeletonLoader";
+import { TaskCard } from "./TaskCard";
+import { EMPLOYEE_STATUS_META } from "../utils/mappings";
 
 export function EmployeeView({
-  data,
-  currentStatus,
-  hasStartedTask,
-  helpRequested,
-  onStartTask,
-  onToggleHelp
+  employee,
+  activeTask,
+  nextTasks,
+  departments,
+  nowMs,
+  loadingTaskId,
+  loadingLabel,
+  isNextTasksOpen,
+  onToggleNextTasks,
+  onPrimaryAction,
+  onHelp,
+  onPause
 }) {
+  const employeeStatus = EMPLOYEE_STATUS_META[employee.status] ?? EMPLOYEE_STATUS_META.available;
+  const departmentLookup = new Map(departments.map((department) => [department.id, department.name]));
+
+  const focusTask = activeTask ?? nextTasks[0] ?? null;
+  const primaryLabel =
+    focusTask && ["in_progress", "help_needed"].includes(focusTask.status)
+      ? "Markér færdig"
+      : "Start opgave";
+
+  const canPause = employee.status !== "busy";
+  const pauseLabel = employee.status === "break" ? "Afslut pause" : "Pause";
+  const criticalCount = nextTasks.filter((task) => task.priority === "crit").length;
+
   return (
-    <section className="space-y-5">
-      <header className="rounded-2xl border border-ui-line bg-ui-panel p-5 shadow-calm">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-          Medarbejder
-        </p>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-semibold text-slate-900">{data.name}</h2>
-            <p className="text-sm text-slate-600">{data.role}</p>
+    <section className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+      <div className="space-y-4">
+        <Card className="overflow-hidden p-0">
+          <div className="border-b border-slate-100 bg-[linear-gradient(130deg,rgba(37,99,235,0.08),transparent_58%)] p-4 md:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-caption uppercase tracking-[0.14em]">Medarbejder</p>
+                <h2 className="text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">
+                  {employee.name}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">{employee.role}</p>
+              </div>
+              <Badge tone={employeeStatus.tone}>{employeeStatus.label}</Badge>
+            </div>
           </div>
-          <StatusBadge
-            status={currentStatus}
-            label={statusLabels[currentStatus] ?? "Status"}
-          />
-        </div>
-      </header>
+          <div className="grid gap-2 p-4 text-xs text-slate-600 md:grid-cols-3 md:p-5">
+            <div className="surface-soft p-3">
+              <p className="text-caption">Åbne opgaver</p>
+              <p className="mt-1 text-lg font-semibold text-slate-900">{nextTasks.length}</p>
+            </div>
+            <div className="surface-soft p-3">
+              <p className="text-caption">Kritiske opgaver</p>
+              <p className="mt-1 text-lg font-semibold text-danger-700">{criticalCount}</p>
+            </div>
+            <div className="surface-soft p-3">
+              <p className="text-caption">Anbefalet handling</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">
+                {focusTask ? primaryLabel : "Afvent ny opgave"}
+              </p>
+            </div>
+          </div>
+        </Card>
 
-      <article className="rounded-2xl border border-ui-line bg-ui-panel p-5 shadow-calm">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-          Aktiv opgave
-        </p>
-        <h3 className="mt-2 text-xl font-semibold text-slate-900">
-          {data.activeTask.title}
-        </h3>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-          <span>{data.activeTask.time}</span>
-          <span className="text-slate-300">•</span>
-          <span>{data.activeTask.department}</span>
-          <span className="text-slate-300">•</span>
-          <StatusBadge
-            status={data.activeTask.priority}
-            label={statusLabels[data.activeTask.priority] ?? "Prioritet"}
-          />
-        </div>
-      </article>
+        <Card
+          title={activeTask ? "Aktiv opgave" : "Næste opgave"}
+          subtitle={loadingLabel && loadingTaskId ? loadingLabel : "Klar næste handling med ét klik"}
+        >
+          {loadingTaskId && focusTask && loadingTaskId === focusTask.id ? (
+            <SkeletonLoader rows={4} />
+          ) : focusTask ? (
+            <TaskCard
+              task={focusTask}
+              departmentName={departmentLookup.get(focusTask.department) ?? "Ukendt afdeling"}
+              assigneeName={employee.name}
+              nowMs={nowMs}
+              compact={false}
+            />
+          ) : (
+            <EmptyState title="Ingen opgaver" description="Du har ingen åbne opgaver lige nu." />
+          )}
+        </Card>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={onStartTask}
-          className="rounded-xl bg-action px-4 py-3 text-sm font-semibold text-white transition hover:bg-action-hover"
+        <Card
+          title="Næste opgaver"
+          subtitle={`${nextTasks.length} i kø`}
+          actions={
+            <Button
+              variant="tertiary"
+              size="sm"
+              aria-label={isNextTasksOpen ? "Skjul næste opgaver" : "Vis næste opgaver"}
+              onClick={onToggleNextTasks}
+            >
+              {isNextTasksOpen ? (
+                <ChevronUp className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              )}
+            </Button>
+          }
         >
-          {hasStartedTask ? "Opgave igangsat" : "Start opgave"}
-        </button>
-        <button
-          type="button"
-          onClick={onToggleHelp}
-          className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
-        >
-          {helpRequested ? "Hjælp registreret" : "Brug for hjælp"}
-        </button>
+          {isNextTasksOpen ? (
+            <div className="space-y-2">
+              {nextTasks.slice(0, 6).map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  departmentName={departmentLookup.get(task.department) ?? "Ukendt afdeling"}
+                  assigneeName={task.assignedTo ? employee.name : null}
+                  nowMs={nowMs}
+                  compact
+                />
+              ))}
+              {nextTasks.length === 0 ? (
+                <EmptyState
+                  title="Ingen kommende opgaver"
+                  description="Der er ikke flere opgaver i din kø."
+                />
+              ) : null}
+            </div>
+          ) : null}
+        </Card>
       </div>
 
-      {(hasStartedTask || helpRequested) && (
-        <div className="rounded-xl border border-ui-line bg-white p-4 text-sm text-slate-700">
-          {hasStartedTask && <p>Opgaven er startet og registreret hos planlæggeren.</p>}
-          {helpRequested && <p>Hjælpeanmodning er sendt til planlæggeren.</p>}
-        </div>
-      )}
-
-      <article className="rounded-2xl border border-ui-line bg-ui-panel p-5 shadow-calm">
-        <h3 className="text-lg font-semibold text-slate-900">Næste opgaver</h3>
-        <ul className="mt-4 space-y-3">
-          {data.nextTasks.map((task) => (
-            <li
-              key={task.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+      <aside className="space-y-4 xl:sticky xl:top-28 xl:self-start">
+        <Card
+          title="Hurtige handlinger"
+          subtitle="Maks 2-3 handlinger pr. skærm"
+          className="bg-white/95"
+        >
+          <div className="grid gap-2">
+            <Button
+              aria-label={primaryLabel}
+              icon={primaryLabel === "Start opgave" ? Play : SquareCheckBig}
+              loading={Boolean(loadingTaskId)}
+              onClick={() => onPrimaryAction(focusTask)}
+              disabled={!focusTask || employee.status === "break"}
+              className="w-full"
             >
-              <div>
-                <p className="text-sm font-medium text-slate-900">{task.title}</p>
-                <p className="text-xs text-slate-600">
-                  {task.time} · {task.department}
-                </p>
-              </div>
-              <StatusBadge
-                status={task.priority}
-                label={statusLabels[task.priority] ?? "Prioritet"}
-              />
-            </li>
-          ))}
-        </ul>
-      </article>
+              {primaryLabel}
+            </Button>
+            <Button
+              variant="secondary"
+              icon={Hand}
+              aria-label="Brug for hjælp"
+              onClick={() => onHelp(focusTask)}
+              disabled={!focusTask || Boolean(loadingTaskId) || employee.status === "break"}
+              className="w-full"
+            >
+              Brug for hjælp
+            </Button>
+            <Button
+              variant="tertiary"
+              icon={PauseCircle}
+              aria-label={pauseLabel}
+              onClick={onPause}
+              disabled={!canPause || Boolean(loadingTaskId)}
+              className="w-full"
+            >
+              {pauseLabel}
+            </Button>
+          </div>
+        </Card>
+
+        <Card title="Guidance" subtitle="Forudsigeligt flow i travle perioder" className="bg-slate-50/90">
+          <ul className="space-y-2 text-sm text-slate-600">
+            <li className="surface-soft px-3 py-2">1. Start højeste prioritet først.</li>
+            <li className="surface-soft px-3 py-2">2. Bed om hjælp ved kapacitetspres.</li>
+            <li className="surface-soft px-3 py-2">3. Brug pause kun når køen er stabil.</li>
+          </ul>
+        </Card>
+      </aside>
     </section>
   );
 }

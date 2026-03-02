@@ -1,135 +1,291 @@
-import { useMemo, useState } from "react";
-import { StatusBadge } from "./StatusBadge";
+import { Search, Siren, Sparkles } from "lucide-react";
+import { Badge } from "./Badge";
+import { Button } from "./Button";
+import { Card } from "./Card";
+import { EmptyState } from "./EmptyState";
+import { KanbanColumn } from "./KanbanColumn";
+import { SectionTile } from "./SectionTile";
+import { EMPLOYEE_STATUS_META, PRIORITY_META } from "../utils/mappings";
+import { formatRelative } from "../utils/time";
 
-const statusLabels = {
-  ok: "OK",
-  advarsel: "Advarsel",
-  kritisk: "Kritisk",
-  iGang: "I gang"
-};
-
-const kanbanColumns = [
-  { key: "ikkeStartet", title: "Ikke startet" },
-  { key: "iGang", title: "I gang" },
-  { key: "afventerHjaelp", title: "Afventer hjælp" }
+const statusFilters = [
+  { id: "all", label: "Alle" },
+  { id: "new", label: "Ikke startet" },
+  { id: "assigned", label: "Tildelt" },
+  { id: "in_progress", label: "I gang" },
+  { id: "help_needed", label: "Afventer hjælp" }
 ];
 
-function SectionCard({ section }) {
+export function PlannerView({
+  departments,
+  departmentLoad,
+  employees,
+  tasks,
+  overdueTasks,
+  filters,
+  nowMs,
+  eventLog,
+  onFilterChange,
+  onTaskClick,
+  onAutoAssign
+}) {
+  const overdueSet = new Set(overdueTasks.map((task) => task.id));
+  const notStartedTasks = tasks.filter((task) => ["new", "assigned"].includes(task.status));
+  const inProgressTasks = tasks.filter((task) => task.status === "in_progress");
+  const waitingHelpTasks = tasks.filter((task) => task.status === "help_needed");
+
+  const helpCount = waitingHelpTasks.length;
+  const criticalCount = tasks.filter((task) => task.priority === "crit").length;
+  const unassignedCount = tasks.filter((task) => task.status === "new").length;
+
+  const resetFilters = () => {
+    onFilterChange({
+      department: "all",
+      priority: "all",
+      status: "all",
+      query: ""
+    });
+  };
+
   return (
-    <article className="rounded-2xl border border-ui-line bg-white p-4 shadow-calm">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-slate-900">{section.name}</h3>
-        <StatusBadge
-          status={section.status}
-          label={statusLabels[section.status] ?? "Status"}
-        />
+    <section className="space-y-4">
+      {overdueTasks.length > 0 ? (
+        <div className="surface border-warning-600/30 bg-warning-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-warning-700">
+              <Siren className="h-4 w-4" aria-hidden="true" />
+              <p className="text-sm font-semibold">
+                {overdueTasks.length} opgaver kræver handling (over 15 minutter)
+              </p>
+            </div>
+            <Button
+              size="sm"
+              aria-label="Auto-tildel alle forfaldne opgaver"
+              icon={Sparkles}
+              onClick={onAutoAssign}
+            >
+              Auto-tildel nu
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label="Aktive opgaver" value={tasks.length} tone="neutral" />
+        <KpiCard label="Afventer hjælp" value={helpCount} tone={helpCount > 0 ? "danger" : "neutral"} />
+        <KpiCard label="Ikke tildelt" value={unassignedCount} tone={unassignedCount > 3 ? "warning" : "neutral"} />
+        <KpiCard label="Kritiske" value={criticalCount} tone={criticalCount > 0 ? "danger" : "success"} />
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="rounded-lg bg-slate-50 p-2">
-          <p className="font-semibold text-slate-900">{section.patientLoad}</p>
-          <p className="text-slate-600">Patienter</p>
+
+      <Card
+        title="Filtre"
+        subtitle="Afdeling, prioritet, status og søgning"
+        actions={
+          <Button variant="secondary" size="sm" aria-label="Nulstil filtre" onClick={resetFilters}>
+            Nulstil
+          </Button>
+        }
+      >
+        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1.3fr]">
+          <div className="space-y-2">
+            <p className="text-caption">Afdeling</p>
+            <div className="flex flex-wrap gap-2">
+              <FilterChip
+                active={filters.department === "all"}
+                label="Alle"
+                onClick={() => onFilterChange({ department: "all" })}
+              />
+              {departments.map((department) => (
+                <FilterChip
+                  key={department.id}
+                  active={filters.department === department.id}
+                  label={department.name}
+                  onClick={() => onFilterChange({ department: department.id })}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-caption">Prioritet</p>
+            <div className="flex flex-wrap gap-2">
+              <FilterChip
+                active={filters.priority === "all"}
+                label="Alle"
+                onClick={() => onFilterChange({ priority: "all" })}
+              />
+              {Object.entries(PRIORITY_META).map(([id, meta]) => (
+                <FilterChip
+                  key={id}
+                  active={filters.priority === id}
+                  label={meta.label}
+                  onClick={() => onFilterChange({ priority: id })}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-caption">Status + søgning</p>
+            <div className="flex flex-wrap gap-2">
+              {statusFilters.map((statusFilter) => (
+                <FilterChip
+                  key={statusFilter.id}
+                  active={filters.status === statusFilter.id}
+                  label={statusFilter.label}
+                  onClick={() => onFilterChange({ status: statusFilter.id })}
+                />
+              ))}
+            </div>
+            <label className="relative mt-2 block">
+              <Search
+                className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                aria-hidden="true"
+              />
+              <input
+                aria-label="Søg opgaver eller medarbejdere"
+                className="h-10 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm"
+                placeholder="Søg på opgavetitel eller medarbejder"
+                value={filters.query}
+                onChange={(event) => onFilterChange({ query: event.target.value })}
+              />
+            </label>
+          </div>
         </div>
-        <div className="rounded-lg bg-slate-50 p-2">
-          <p className="font-semibold text-slate-900">{section.staffOnDuty}</p>
-          <p className="text-slate-600">På vagt</p>
-        </div>
-        <div className="rounded-lg bg-slate-50 p-2">
-          <p className="font-semibold text-slate-900">{section.waitingHelp}</p>
-          <p className="text-slate-600">Hjælp</p>
-        </div>
+      </Card>
+
+      <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr_1.55fr]">
+        <Card title="Afsnitsoverblik" subtitle="Belastning og status" className="xl:min-h-[600px]">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            {departmentLoad.map((section) => (
+              <SectionTile key={section.id} section={section} />
+            ))}
+          </div>
+        </Card>
+
+        <Card title="Medarbejdere" subtitle="Status og aktivitetskø" className="xl:min-h-[600px]">
+          <div className="space-y-2">
+            {employees.map((employee) => {
+              const status = EMPLOYEE_STATUS_META[employee.status] ?? EMPLOYEE_STATUS_META.available;
+              return (
+                <article
+                  key={employee.id}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition hover:border-slate-300"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-900">{employee.name}</p>
+                    <Badge tone={status.tone}>{status.label}</Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Sidste aktivitet: {formatRelative(employee.lastActiveAt, nowMs)}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Opgaver i kø: {employee.assignedTaskIds.length}
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card title="Opgaveflow" subtitle="Ikke startet, i gang, afventer hjælp" className="xl:min-h-[600px]">
+          {tasks.length === 0 ? (
+            <EmptyState
+              title="Ingen opgaver matcher filter"
+              description="Justér filtre eller nulstil for at se alle opgaver."
+            />
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-3">
+              <KanbanColumn
+                title="Ikke startet"
+                tasks={notStartedTasks}
+                departments={departments}
+                employees={employees}
+                overdueTaskIds={overdueSet}
+                nowMs={nowMs}
+                onTaskClick={onTaskClick}
+              />
+              <KanbanColumn
+                title="I gang"
+                tasks={inProgressTasks}
+                departments={departments}
+                employees={employees}
+                overdueTaskIds={overdueSet}
+                nowMs={nowMs}
+                onTaskClick={onTaskClick}
+              />
+              <KanbanColumn
+                title="Afventer hjælp"
+                tasks={waitingHelpTasks}
+                departments={departments}
+                employees={employees}
+                overdueTaskIds={overdueSet}
+                nowMs={nowMs}
+                onTaskClick={onTaskClick}
+              />
+            </div>
+          )}
+        </Card>
       </div>
-    </article>
+
+      <Card title="Recent activity" subtitle="Audit log">
+        {eventLog.length === 0 ? (
+          <EmptyState title="Ingen aktivitet endnu" description="Handlinger logges her." />
+        ) : (
+          <ul className="space-y-2">
+            {eventLog.slice(0, 8).map((event) => (
+              <li
+                key={event.id}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold text-slate-800">{event.type}</p>
+                  <span className="data-pill">{formatRelative(event.ts, nowMs)}</span>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">
+                  {event.actor} {event.taskId ? `· ${event.taskId}` : ""}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">{event.details}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </section>
   );
 }
 
-export function PlannerView({ data }) {
-  const [onlyAlerts, setOnlyAlerts] = useState(false);
+function FilterChip({ label, active, onClick }) {
+  return (
+    <button
+      type="button"
+      aria-label={`Filter ${label}`}
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+        active
+          ? "border-brand-600 bg-brand-50 text-brand-700"
+          : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
 
-  const visibleSections = useMemo(() => {
-    if (!onlyAlerts) {
-      return data.sections;
-    }
-
-    return data.sections.filter((section) => section.status !== "ok");
-  }, [data.sections, onlyAlerts]);
+function KpiCard({ label, value, tone = "neutral" }) {
+  const toneClass =
+    tone === "danger"
+      ? "text-danger-700"
+      : tone === "warning"
+      ? "text-warning-700"
+      : tone === "success"
+      ? "text-success-700"
+      : "text-slate-900";
 
   return (
-    <section className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ui-line bg-ui-panel p-5 shadow-calm">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-            Planlægger
-          </p>
-          <h2 className="text-2xl font-semibold text-slate-900">Driftsoverblik</h2>
-        </div>
-        <button
-          type="button"
-          onClick={() => setOnlyAlerts((prev) => !prev)}
-          className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
-        >
-          {onlyAlerts ? "Vis alle afsnit" : "Vis kun advarsler"}
-        </button>
-      </header>
-
-      <section>
-        <h3 className="mb-3 text-lg font-semibold text-slate-900">Afsnit</h3>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {visibleSections.map((section) => (
-            <SectionCard key={section.id} section={section} />
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-ui-line bg-ui-panel p-5 shadow-calm">
-        <h3 className="text-lg font-semibold text-slate-900">Medarbejderstatus</h3>
-        <ul className="mt-4 space-y-3">
-          {data.staff.map((member) => (
-            <li
-              key={member.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
-            >
-              <div>
-                <p className="text-sm font-medium text-slate-900">{member.name}</p>
-                <p className="text-xs text-slate-600">
-                  {member.section} · {member.task}
-                </p>
-              </div>
-              <StatusBadge
-                status={member.status}
-                label={statusLabels[member.status] ?? "Status"}
-              />
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section>
-        <h3 className="mb-3 text-lg font-semibold text-slate-900">Kanban</h3>
-        <div className="grid gap-3 lg:grid-cols-3">
-          {kanbanColumns.map((column) => (
-            <article
-              key={column.key}
-              className="rounded-2xl border border-ui-line bg-ui-panel p-4 shadow-calm"
-            >
-              <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-600">
-                {column.title}
-              </h4>
-              <div className="mt-3 space-y-2">
-                {data.kanban[column.key].map((task) => (
-                  <div
-                    key={task.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-3"
-                  >
-                    <p className="text-sm font-medium text-slate-900">{task.title}</p>
-                    <p className="mt-1 text-xs text-slate-600">{task.section}</p>
-                    <p className="mt-2 text-xs font-medium text-sky-700">{task.eta}</p>
-                  </div>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-    </section>
+    <article className="surface-soft p-3.5">
+      <p className="text-caption">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold tracking-tight ${toneClass}`}>{value}</p>
+    </article>
   );
 }
