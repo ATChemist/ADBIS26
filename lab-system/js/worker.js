@@ -10,7 +10,6 @@
 ──────────────────────────────────────────── */
 
 let workerBusy   = false;
-let activeTaskId = null;
 let myDoneCount  = 0;
 let wFilterMode  = 'alle'; // 'alle' | 'akut' | 'fremsk' | 'rutine'
 
@@ -18,12 +17,16 @@ const PRIO_ORDER_W = { akut: 0, fremsk: 1, udskr: 2, rutine: 3 };
 const PRIO_LABEL_W = { akut: 'Akut', fremsk: 'Fremskyndet', udskr: 'Udskrivning', rutine: 'Rutine' };
 const PRIO_BADGE_W = { akut: 'badge-red', fremsk: 'badge-orange', udskr: 'badge-amber', rutine: 'badge-gray' };
 
-/**
- * Department codes this worker can service.
- * In production, load from the logged-in user's profile.
- * @type {string[]}
- */
-let myCompetences = [];
+function getCurrentWorker() {
+  return state.workers.find(s => s.name === state.currentUser);
+}
+
+function syncCurrentWorkerState(nextState, dept) {
+  const worker = getCurrentWorker();
+  if (!worker) return;
+  worker.state = nextState;
+  worker.dept = dept;
+}
 
 /* ────────────────────────────────────────────
    INIT  (called by app.js after login)
@@ -34,12 +37,11 @@ let myCompetences = [];
  * @param {string} userName  - e.g. 'Sofia A.'
  */
 function initWorkerPage(userName) {
-  const staffMember = STAFF.find(s => s.name === userName);
-  myCompetences = staffMember?.competences ?? [];
+  state.currentUser = userName;
 
   // Reset state
   workerBusy   = false;
-  activeTaskId = null;
+  state.activeTask = null;
   myDoneCount  = 0;
   wFilterMode  = 'alle';
 
@@ -54,8 +56,9 @@ function initWorkerPage(userName) {
 
 function renderWorkerTasks() {
   const list = document.getElementById('worker-task-list');
+  const myCompetences = getCurrentWorker()?.competences ?? [];
 
-  let filtered = TASKS.filter(t => {
+  let filtered = state.tasks.filter(t => {
     if (t.status === 'done') return false;
     // Only show tasks for departments this worker is competent in
     if (myCompetences.length > 0 && !myCompetences.some(c => t.dept.startsWith(c))) return false;
@@ -132,30 +135,32 @@ function renderWorkerTasks() {
 ──────────────────────────────────────────── */
 
 function takeTask(id) {
-  if (workerBusy && activeTaskId) {
+  if (workerBusy && state.activeTask) {
     toast('Du er allerede optaget', 'Færdiggør din nuværende opgave først.', 'amber');
     return;
   }
-  const t = TASKS.find(x => x.id === id);
+  const t = state.tasks.find(x => x.id === id);
   if (!t || t.status !== 'open') return;
 
   t.status   = 'taken';
   t.assignee = currentWorkerShortName();
-  activeTaskId = id;
+  state.activeTask = t;
 
+  syncCurrentWorkerState('busy', t.dept);
   setWorkerBusyUI(t);
   renderWorkerTasks();
   toast('Opgave taget', `${t.dept} · ${t.deadline}`, 'blue');
 }
 
 function workerDone(id) {
-  const t = TASKS.find(x => x.id === id);
+  const t = state.tasks.find(x => x.id === id);
   if (!t) return;
   t.status = 'done';
   myDoneCount++;
 
-  if (activeTaskId === id) {
-    activeTaskId = null;
+  if (state.activeTask?.id === id) {
+    state.activeTask = null;
+    syncCurrentWorkerState('free', 'Ledig');
     setFreeUI();
   }
   renderWorkerTasks();
@@ -164,11 +169,11 @@ function workerDone(id) {
 }
 
 function completeActiveTask() {
-  if (activeTaskId !== null) workerDone(activeTaskId);
+  if (state.activeTask) workerDone(state.activeTask.id);
 }
 
 function reqHelp(id) {
-  const t = TASKS.find(x => x.id === id);
+  const t = state.tasks.find(x => x.id === id);
   toast('Hjælp anmodet', `Planlæggeren er notificeret om ${t?.dept}.`, 'amber');
 }
 
@@ -200,13 +205,15 @@ function setFreeUI() {
 }
 
 function setFree() {
-  activeTaskId = null;
+  state.activeTask = null;
+  syncCurrentWorkerState('free', 'Ledig');
   setFreeUI();
   renderWorkerTasks();
 }
 
 function setWorkerManualBusy() {
   workerBusy = true;
+  syncCurrentWorkerState('busy', 'Manuel status');
   document.getElementById('si-dot').className         = 'si-dot busy';
   document.getElementById('si-text').textContent      = 'Optaget';
   document.getElementById('si-sub').textContent       = 'Manuel status';
@@ -231,12 +238,13 @@ function setWFilter(f, el) {
 
 /** @returns {string} Short display name, e.g. 'Sofia A.' */
 function currentWorkerShortName() {
-  const parts = currentUser.split(' ');
+  if (!state.currentUser) return '';
+  const parts = state.currentUser.split(' ');
   return parts[0] + ' ' + (parts[1]?.[0] ?? '') + '.';
 }
 
 function updateWorkerStats() {
-  const active = activeTaskId ? TASKS.find(t => t.id === activeTaskId) : null;
+  const active = state.activeTask;
   document.getElementById('my-done-count').textContent  = myDoneCount;
   document.getElementById('my-active-name').textContent = active?.dept.split('–')[0].trim() ?? '–';
 }

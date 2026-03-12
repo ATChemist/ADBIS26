@@ -9,10 +9,6 @@
    STATE
 ──────────────────────────────────────────── */
 
-/** @type {Task[]} Live task list (mutated in place) */
-let TASKS = INITIAL_TASKS.map(t => ({ ...t }));
-
-let nextId        = INITIAL_TASKS.length + 1;
 let taskFilter    = 'all';   // 'all' | 'akut' | 'open' | 'done'
 let selPrioVal    = 'rutine';
 let assignTarget  = null;    // task id awaiting assignment
@@ -24,15 +20,19 @@ const PRIO_ORDER = { akut: 0, fremsk: 1, udskr: 2, rutine: 3 };
 const PRIO_LABEL   = { akut: 'Akut', fremsk: 'Fremskyndet', udskr: 'Udskrivning', rutine: 'Rutine' };
 const PRIO_BADGE   = { akut: 'badge-red', fremsk: 'badge-orange', udskr: 'badge-amber', rutine: 'badge-gray' };
 
+function getNextTaskId() {
+  return state.tasks.reduce((maxId, task) => Math.max(maxId, task.id), 0) + 1;
+}
+
 /* ────────────────────────────────────────────
    STATS
 ──────────────────────────────────────────── */
 
 function updateStats() {
-  document.getElementById('st-akut').textContent    = TASKS.filter(t => t.prio === 'akut'  && t.status !== 'done').length;
-  document.getElementById('st-done').textContent    = TASKS.filter(t => t.status === 'done').length;
-  document.getElementById('st-pending').textContent = TASKS.filter(t => t.status === 'open').length;
-  document.getElementById('st-active').textContent  = TASKS.filter(t => t.status === 'taken').length;
+  document.getElementById('st-akut').textContent    = state.tasks.filter(t => t.prio === 'akut'  && t.status !== 'done').length;
+  document.getElementById('st-done').textContent    = state.tasks.filter(t => t.status === 'done').length;
+  document.getElementById('st-pending').textContent = state.tasks.filter(t => t.status === 'open').length;
+  document.getElementById('st-active').textContent  = state.tasks.filter(t => t.status === 'taken').length;
 }
 
 /* ────────────────────────────────────────────
@@ -42,10 +42,10 @@ function updateStats() {
 function getFilteredTasks() {
   let list;
   switch (taskFilter) {
-    case 'akut': list = TASKS.filter(t => t.prio === 'akut' && t.status !== 'done'); break;
-    case 'open': list = TASKS.filter(t => t.status === 'open'); break;
-    case 'done': list = TASKS.filter(t => t.status === 'done'); break;
-    default:     list = TASKS.filter(t => t.status !== 'done');
+    case 'akut': list = state.tasks.filter(t => t.prio === 'akut' && t.status !== 'done'); break;
+    case 'open': list = state.tasks.filter(t => t.status === 'open'); break;
+    case 'done': list = state.tasks.filter(t => t.status === 'done'); break;
+    default:     list = state.tasks.filter(t => t.status !== 'done');
   }
   return list.sort((a, b) => PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio]);
 }
@@ -119,10 +119,11 @@ function setFilter(f, el) {
 ──────────────────────────────────────────── */
 
 function markDone(id) {
-  const t = TASKS.find(x => x.id === id);
+  const t = state.tasks.find(x => x.id === id);
   if (!t) return;
   t.status   = 'done';
   t.assignee = t.assignee ?? 'Manuel';
+  if (state.activeTask?.id === id) state.activeTask = null;
   renderPlannerTasks();
   updateStats();
   toast('Opgave færdig', `${t.dept} markeret som færdig.`, 'green');
@@ -135,7 +136,8 @@ function openDeleteModal(id) {
 
 function confirmDelete() {
   if (deleteTarget !== null) {
-    TASKS = TASKS.filter(x => x.id !== deleteTarget);
+    state.tasks = state.tasks.filter(x => x.id !== deleteTarget);
+    if (state.activeTask?.id === deleteTarget) state.activeTask = null;
     deleteTarget = null;
   }
   closeModal('modal-delete');
@@ -145,14 +147,14 @@ function confirmDelete() {
 
 function openAssignModal(id) {
   assignTarget = id;
-  const t = TASKS.find(x => x.id === id);
+  const t = state.tasks.find(x => x.id === id);
   document.getElementById('assign-desc').textContent =
     `Tildel: "${t.type}" på ${t.dept}`;
   openModal('modal-assign');
 }
 
 function confirmAssign() {
-  const t = TASKS.find(x => x.id === assignTarget);
+  const t = state.tasks.find(x => x.id === assignTarget);
   if (t) {
     t.assignee = document.getElementById('assign-select').value;
     t.status   = 'taken';
@@ -183,8 +185,8 @@ function addTask() {
   const time     = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const prio     = selPrioVal;
 
-  TASKS.unshift({
-    id: nextId++, dept, type, prio,
+  state.tasks.unshift({
+    id: getNextTaskId(), dept, type, prio,
     deadline, note, status: assignee ? 'taken' : 'open', assignee, time,
   });
 
@@ -218,8 +220,8 @@ function fireAkutKald() {
   const now  = new Date();
   const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
-  TASKS.unshift({
-    id: nextId++, dept, type: `Akut kald – ${msg}`, prio: 'akut',
+  state.tasks.unshift({
+    id: getNextTaskId(), dept, type: `Akut kald – ${msg}`, prio: 'akut',
     deadline: 'Øjeblikkeligt', note: 'Notifikation sendt til alle prøvetagere',
     status: 'open', assignee: null, time,
   });
@@ -241,7 +243,7 @@ function renderStaff() {
   const STATE_LABEL = { free: 'Fri', busy: 'Optaget', break: 'Pause' };
   const STATE_CLS   = { free: 'ss-free', busy: 'ss-busy', break: 'ss-break' };
 
-  STAFF.forEach(s => {
+  state.workers.forEach(s => {
     const row = document.createElement('div');
     row.className = 'staff-row';
     row.innerHTML = `

@@ -10,8 +10,21 @@
    GLOBAL APP STATE
 ──────────────────────────────────────────── */
 
-let currentRole = 'planner'; // 'planner' | 'worker'
-let currentUser = '';        // Full name of the logged-in user
+const state = {
+  currentUser: null,
+  role: null,
+  tasks: [],
+  workers: [],
+  activeTask: null,
+};
+
+state.tasks = INITIAL_TASKS.map(task => ({ ...task }));
+state.workers = STAFF.map(worker => ({
+  ...worker,
+  competences: [...worker.competences],
+}));
+
+globalThis.state = state;
 
 /* ────────────────────────────────────────────
    LOGIN
@@ -22,7 +35,7 @@ let currentUser = '';        // Full name of the logged-in user
  * @param {'planner'|'worker'} role
  */
 function setRole(role) {
-  currentRole = role;
+  state.role = role;
   document.getElementById('rt-plan').classList.toggle('sel',   role === 'planner');
   document.getElementById('rt-worker').classList.toggle('sel', role === 'worker');
 
@@ -34,10 +47,10 @@ function setRole(role) {
 
 /** Handle the login button click. */
 function doLogin() {
-  currentUser = document.getElementById('login-user-sel').value;
+  state.currentUser = document.getElementById('login-user-sel').value;
 
   // Derive initials and avatar class
-  const parts    = currentUser.split(' ');
+  const parts    = state.currentUser.split(' ');
   const initials = parts.slice(0, 2).map(p => p[0]).join('').toUpperCase();
   const short    = `${parts[0]} ${parts[1] ?? ''}`.trim();
 
@@ -49,8 +62,8 @@ function doLogin() {
   document.getElementById('topbar-av').textContent    = initials;
   document.getElementById('topbar-uname').textContent = short;
 
-  if (currentRole === 'planner') {
-    const plannerUser = PLANNER_USERS.find(u => u.name === currentUser);
+  if (state.role === 'planner') {
+    const plannerUser = PLANNER_USERS.find(u => u.name === state.currentUser);
     document.getElementById('topbar-av').className       = `topbar-avatar ${plannerUser?.avClass ?? 'av-blue'}`;
     document.getElementById('topbar-page-label').textContent = 'Planlægger';
     showPage('planner-page');
@@ -59,7 +72,7 @@ function doLogin() {
     updateStats();
 
   } else {
-    const staffMember = STAFF.find(s => s.name === currentUser);
+    const staffMember = state.workers.find(s => s.name === state.currentUser);
     document.getElementById('topbar-av').className       = `topbar-avatar ${staffMember?.avClass ?? 'av-blue'}`;
     document.getElementById('topbar-page-label').textContent = 'Prøvetager';
 
@@ -74,7 +87,7 @@ function doLogin() {
       .map(c => `<span class="comp-tag">${c}</span>`).join('');
 
     showPage('worker-page');
-    initWorkerPage(currentUser);
+    initWorkerPage(state.currentUser);
   }
 
   startClock();
@@ -85,6 +98,8 @@ function doLogout() {
   document.getElementById('view-app').style.display   = 'none';
   document.getElementById('view-login').style.display = 'flex';
   stopClock();
+  state.currentUser = null;
+  state.activeTask = null;
 
   // Reset role selector to planner defaults
   setRole('planner');
