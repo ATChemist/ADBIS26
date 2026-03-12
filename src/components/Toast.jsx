@@ -4,19 +4,19 @@ import { cn } from "../utils/cn";
 const toneMeta = {
   success: {
     icon: CheckCircle2,
-    className: "border-success-600/20 bg-success-50 text-success-700"
+    className: "border-emerald-200 bg-emerald-50 text-emerald-700"
   },
   warning: {
     icon: TriangleAlert,
-    className: "border-warning-600/20 bg-warning-50 text-warning-700"
+    className: "border-amber-200 bg-amber-50 text-amber-700"
   },
   danger: {
     icon: XCircle,
-    className: "border-danger-600/20 bg-danger-50 text-danger-700"
+    className: "border-rose-200 bg-rose-50 text-rose-700"
   },
   info: {
     icon: Info,
-    className: "border-brand-100 bg-brand-50 text-brand-700"
+    className: "border-blue-200 bg-blue-50 text-blue-700"
   }
 };
 
@@ -35,7 +35,7 @@ export function ToastStack({ toasts, onDismiss }) {
           <div
             key={toast.id}
             className={cn(
-              "pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-panel",
+              "pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-sm",
               tone.className
             )}
           >

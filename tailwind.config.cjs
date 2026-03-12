@@ -4,6 +4,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        app: {
+          bg: "rgb(var(--bg) / <alpha-value>)",
+          surface: "rgb(var(--surface) / <alpha-value>)",
+          card: "rgb(var(--card) / <alpha-value>)",
+          border: "rgb(var(--border) / <alpha-value>)",
+          text: "rgb(var(--text) / <alpha-value>)",
+          muted: "rgb(var(--muted) / <alpha-value>)",
+          primary: "rgb(var(--primary) / <alpha-value>)",
+          success: "rgb(var(--success) / <alpha-value>)",
+          warning: "rgb(var(--warning) / <alpha-value>)",
+          danger: "rgb(var(--danger) / <alpha-value>)"
+        },
         brand: {
           50: "#f1f7ff",
           100: "#dfeeff",

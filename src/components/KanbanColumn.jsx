@@ -1,4 +1,4 @@
-import { Card } from "./Card";
+import { Card, CardContent, CardHeader } from "./ui/Card";
 import { EmptyState } from "./EmptyState";
 import { TaskCard } from "./TaskCard";
 
@@ -16,10 +16,17 @@ export function KanbanColumn({
   const employeeLookup = new Map(employees.map((employee) => [employee.id, employee.name]));
 
   return (
-    <Card title={title} subtitle={`${tasks.length} opgaver`} className={`h-full ${className ?? ""}`}>
-      <div className="max-h-[460px] space-y-3 overflow-y-auto pr-1">
+    <Card className={className}>
+      <CardHeader className="px-4 py-3">
+        <div>
+          <p className="eyebrow">Flow</p>
+          <h4 className="mt-1 text-sm font-semibold text-app-text">{title}</h4>
+        </div>
+        <span className="data-pill">{tasks.length}</span>
+      </CardHeader>
+      <CardContent className="max-h-[540px] space-y-2 overflow-y-auto px-4 py-3">
         {tasks.length === 0 ? (
-          <EmptyState title="Ingen opgaver" description="Kolonnen er tom lige nu." />
+          <EmptyState title="Ingen opgaver" description="Kolonnen er tom." />
         ) : (
           tasks.map((task) => (
             <TaskCard
@@ -30,10 +37,11 @@ export function KanbanColumn({
               assigneeName={task.assignedTo ? employeeLookup.get(task.assignedTo) : null}
               overdue={overdueTaskIds.has(task.id)}
               onClick={() => onTaskClick(task)}
+              compact
             />
           ))
         )}
-      </div>
+      </CardContent>
     </Card>
   );
 }

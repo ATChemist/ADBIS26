@@ -24,7 +24,7 @@ export const initialState = {
   ui: {
     loadingTaskId: null,
     loadingLabel: "",
-    showDemoControls: true,
+    showDemoControls: false,
     isNextTasksOpen: true,
     modal: null,
     filters: {

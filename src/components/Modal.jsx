@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
-import { Button } from "./Button";
+import { Button } from "./ui/Button";
 
 export function Modal({
   open,
@@ -46,17 +46,17 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative z-10 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-xl"
+        className="relative z-10 w-full max-w-lg rounded-2xl border border-app-border bg-white p-5 shadow-md"
       >
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
-            {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+            <h3 className="text-lg font-semibold text-app-text">{title}</h3>
+            {description ? <p className="mt-1 text-sm text-app-muted">{description}</p> : null}
           </div>
           <button
             type="button"
             aria-label="Luk dialog"
-            className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
+            className="rounded-lg p-1 text-app-muted hover:bg-slate-100"
             onClick={onClose}
           >
             <X className="h-5 w-5" aria-hidden="true" />

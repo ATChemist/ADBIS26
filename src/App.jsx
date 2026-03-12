@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
-import { Button } from "./components/Button";
 import { DemoControls } from "./components/DemoControls";
 import { EmployeeView } from "./components/EmployeeView";
 import { Modal } from "./components/Modal";
 import { PlannerView } from "./components/PlannerView";
-import { Tabs } from "./components/Tabs";
 import { ToastStack } from "./components/Toast";
 import { TopBar } from "./components/TopBar";
+import { Button } from "./components/ui/Button";
+import { Drawer } from "./components/ui/Drawer";
+import { Tabs } from "./components/ui/Tabs";
 import {
   NETWORKED_ACTION_TYPES,
   getLatencyForConnectivity,
@@ -452,65 +453,29 @@ export default function App() {
   const isHelpModal = state.ui.modal?.type === "help";
   const taskIsUnassigned = Boolean(modalTask && !modalTask.assignedTo);
   const taskConfirmLabel = taskIsUnassigned ? "Tildel opgave" : "Gem omfordeling";
-  const currentViewLabel = state.view === "employee" ? "Medarbejderflow" : "Planlægger-overblik";
-  const currentViewDescription =
-    state.view === "employee"
-      ? "Handlingscentreret visning med fokus på næste opgave og færre klik."
-      : "Datatæt kontrolrum til kapacitet, prioritering og opgavefordeling.";
 
   return (
     <main className="min-h-screen py-3 md:py-4">
-      <div className="mx-auto max-w-[1740px] space-y-4 p-3 md:p-6">
+      <div className="mx-auto max-w-[1780px] space-y-6 p-3 md:p-6">
         <TopBar
           clockMs={clockMs}
           connectivity={state.connectivity}
           queueCount={queueCount}
           onConnectivityChange={handleConnectivityChange}
+          onOpenSimulation={() => dispatch({ type: "TOGGLE_DEMO_CONTROLS" })}
         />
 
-        <div className="surface overflow-hidden p-0">
-          <div className="border-b border-slate-100 bg-[linear-gradient(115deg,rgba(37,99,235,0.08),transparent_48%)] p-4 md:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <Tabs
-                tabs={VIEW_TABS}
-                value={state.view}
-                onChange={(nextView) => dispatch({ type: "SET_VIEW", payload: nextView })}
-                ariaLabel="Skift mellem medarbejder og planlægger"
-              />
-              <p className="text-caption">Keyboard shortcut: tryk "g" for at skifte view</p>
-            </div>
-          </div>
-          <div className="grid gap-3 p-4 md:grid-cols-[1fr_auto] md:items-center md:p-5">
-            <div>
-              <p className="text-caption uppercase tracking-[0.16em]">{currentViewLabel}</p>
-              <p className="mt-1 text-sm text-slate-600">{currentViewDescription}</p>
-            </div>
-            {state.ui.loadingLabel ? (
-              <span className="data-pill bg-brand-50 text-brand-700">{state.ui.loadingLabel}</span>
-            ) : (
-              <span className="data-pill">System klar</span>
-            )}
+        <div className="surface px-6 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Tabs
+              tabs={VIEW_TABS}
+              value={state.view}
+              onChange={(nextView) => dispatch({ type: "SET_VIEW", payload: nextView })}
+              ariaLabel="Skift mellem medarbejder og planlægger"
+            />
+            <p className="text-xs text-app-muted">Tryk "g" for hurtigt view-skift</p>
           </div>
         </div>
-
-        <DemoControls
-          open={state.ui.showDemoControls}
-          dayProfile={state.demo.dayProfile}
-          taskVolume={state.demo.targetTaskCount}
-          onToggle={() => dispatch({ type: "TOGGLE_DEMO_CONTROLS" })}
-          onProfileChange={(profile) =>
-            dispatch({
-              type: "SET_DAY_PROFILE",
-              payload: profile,
-              meta: { ts: new Date().toISOString() }
-            })
-          }
-          onVolumeChange={(value) => dispatch({ type: "SET_TASK_VOLUME", payload: value })}
-          onSpike={() => {
-            dispatch({ type: "TRIGGER_ACUTE_SPIKE", meta: { ts: new Date().toISOString() } });
-            pushToast("danger", "Akut spike", "Tre nye hasteopgaver tilføjet");
-          }}
-        />
 
         {state.view === "employee" ? (
           <EmployeeView
@@ -544,6 +509,30 @@ export default function App() {
         )}
       </div>
 
+      <Drawer
+        open={state.ui.showDemoControls}
+        title="Simulation controls"
+        description="Travlhedsprofiler, opgavemængde og akut-scenarier"
+        onClose={() => dispatch({ type: "TOGGLE_DEMO_CONTROLS" })}
+      >
+        <DemoControls
+          dayProfile={state.demo.dayProfile}
+          taskVolume={state.demo.targetTaskCount}
+          onProfileChange={(profile) =>
+            dispatch({
+              type: "SET_DAY_PROFILE",
+              payload: profile,
+              meta: { ts: new Date().toISOString() }
+            })
+          }
+          onVolumeChange={(value) => dispatch({ type: "SET_TASK_VOLUME", payload: value })}
+          onSpike={() => {
+            dispatch({ type: "TRIGGER_ACUTE_SPIKE", meta: { ts: new Date().toISOString() } });
+            pushToast("danger", "Akut spike", "Tre nye hasteopgaver tilføjet");
+          }}
+        />
+      </Drawer>
+
       <Modal
         open={isHelpModal}
         title="Brug for hjælp"
@@ -556,7 +545,7 @@ export default function App() {
           <span className="text-caption">Årsag</span>
           <select
             aria-label="Vælg årsag til hjælpekald"
-            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+            className="min-h-11 w-full rounded-xl border border-app-border px-3 text-sm"
             value={helpReason}
             onChange={(event) => setHelpReason(event.target.value)}
           >
@@ -584,7 +573,7 @@ export default function App() {
               Luk
             </Button>
             {modalTask?.assignedTo ? (
-              <Button variant="danger" aria-label="Annuller opgave" onClick={cancelTask}>
+              <Button variant="secondary" aria-label="Annuller opgave" onClick={cancelTask}>
                 Annuller opgave
               </Button>
             ) : null}
@@ -599,8 +588,8 @@ export default function App() {
         }
       >
         <div className="space-y-3">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-            <p className="font-semibold text-slate-900">{modalTask?.title}</p>
+          <div className="surface-subtle rounded-xl p-3 text-sm text-app-muted">
+            <p className="font-semibold text-app-text">{modalTask?.title}</p>
             <p className="mt-1">Task ID: {modalTask?.id}</p>
           </div>
 
@@ -608,7 +597,7 @@ export default function App() {
             <span className="text-caption">Medarbejder</span>
             <select
               aria-label="Vælg medarbejder til opgaven"
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="min-h-11 w-full rounded-xl border border-app-border px-3 text-sm"
               value={selectedEmployeeId}
               onChange={(event) => setSelectedEmployeeId(event.target.value)}
             >
@@ -624,7 +613,7 @@ export default function App() {
             <span className="text-caption">Begrundelse</span>
             <select
               aria-label="Vælg begrundelse"
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="min-h-11 w-full rounded-xl border border-app-border px-3 text-sm"
               value={adminReason}
               onChange={(event) => setAdminReason(event.target.value)}
             >

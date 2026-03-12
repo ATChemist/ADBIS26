@@ -4,7 +4,7 @@ export function SkeletonLoader({ rows = 3 }) {
       {Array.from({ length: rows }).map((_, index) => (
         <div
           key={index}
-          className="h-4 animate-pulse rounded-md bg-slate-200"
+          className="h-4 animate-pulse rounded-md bg-app-border/70"
           style={{ width: `${100 - index * 12}%` }}
         />
       ))}
