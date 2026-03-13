@@ -1,6 +1,6 @@
 /**
  * data.js  –  Mock data for LabSystem prototype
- * Herlev Hospital · Klinisk Biokemisk Laboratorium
+ * Hillerød · Klinisk Biokemisk Laboratorium
  *
  * TODO: Replace with real API calls (e.g. fetch('/api/tasks'), fetch('/api/staff'))
  */
