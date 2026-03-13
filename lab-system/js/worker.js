@@ -15,6 +15,7 @@ let myDoneCount       = 0;
 let wFilterMode       = 'alle'; // 'alle' | 'akut' | 'fremsk' | 'rutine'
 let activeTaskStartTime = null; // Feature 4: timestamp when task was taken
 let timerInterval     = null;   // Feature 4: setInterval handle
+let workerDoneTarget  = null;   // id of task pending done-confirmation
 
 const PRIO_ORDER_W = { akut: 0, fremsk: 1, udskr: 2, rutine: 3 };
 const PRIO_LABEL_W = { akut: 'Akut', fremsk: 'Fremskyndet', udskr: 'Udskrivning', rutine: 'Rutine' };
@@ -109,7 +110,7 @@ function renderWorkerTasks() {
         <button class="btn btn-ghost btn-sm"   onclick="reqHelp(${t.id})">Anmod om hjælp</button>`;
     } else if (isOwn) {
       actionsHtml = `
-        <button class="btn btn-primary btn-sm" onclick="workerDone(${t.id})">
+        <button class="btn btn-primary btn-sm" onclick="openWorkerDoneModal(${t.id})">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           Markér færdig
         </button>`;
@@ -172,9 +173,29 @@ function takeTask(id) {
   toast('Opgave taget', `${t.dept} · ${t.deadline}`, 'blue');
 }
 
+function openWorkerDoneModal(id) {
+  const t = TASKS.find(x => x.id === id);
+  if (!t) return;
+  workerDoneTarget = id;
+  document.getElementById('wdone-desc').textContent =
+    `Er du sikker på, at opgaven er fuldt udført og prøven er taget korrekt? (${t.dept} · ${t.type})`;
+  openModal('modal-worker-done');
+}
+
+function confirmWorkerDone() {
+  closeModal('modal-worker-done');
+  if (workerDoneTarget === null) return;
+  workerDone(workerDoneTarget);
+  workerDoneTarget = null;
+}
+
 function workerDone(id) {
   const t = TASKS.find(x => x.id === id);
   if (!t) return;
+  t.completedAt = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+  t.durationMin = activeTaskStartTime
+    ? Math.round((Date.now() - activeTaskStartTime) / 60000)
+    : null;
   t.status = 'done';
   myDoneCount++;
 
@@ -186,12 +207,13 @@ function workerDone(id) {
     setFreeUI();
   }
   renderWorkerTasks();
-  updateStats();  // also update planner stats
+  updateStats();         // also update planner stats
+  renderActivityLog();   // update planner activity log
   toast('Opgave færdig 🎉', `${t.dept} er markeret som færdig.`, 'green');
 }
 
 function completeActiveTask() {
-  if (activeTaskId !== null) workerDone(activeTaskId);
+  if (activeTaskId !== null) openWorkerDoneModal(activeTaskId);
 }
 
 function reqHelp(id) {

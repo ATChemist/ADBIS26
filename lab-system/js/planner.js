@@ -13,10 +13,12 @@
 let TASKS = INITIAL_TASKS.map(t => ({ ...t }));
 
 let nextId        = INITIAL_TASKS.length + 1;
-let taskFilter    = 'all';   // 'all' | 'akut' | 'open' | 'done'
+let taskFilter    = 'all';   // 'all' | 'akut' | 'open' | 'done' | 'escalated'
 let selPrioVal    = 'rutine';
 let assignTarget  = null;    // task id awaiting assignment
 let deleteTarget  = null;    // task id awaiting delete confirmation
+let pendingAkutDept = null;  // dept stored while confirmation modal is open
+let pendingAkutMsg  = null;  // message stored while confirmation modal is open
 
 /** Priority sort order */
 const PRIO_ORDER = { akut: 0, fremsk: 1, udskr: 2, rutine: 3 };
@@ -42,10 +44,11 @@ function updateStats() {
 function getFilteredTasks() {
   let list;
   switch (taskFilter) {
-    case 'akut': list = TASKS.filter(t => t.prio === 'akut' && t.status !== 'done'); break;
-    case 'open': list = TASKS.filter(t => t.status === 'open'); break;
-    case 'done': list = TASKS.filter(t => t.status === 'done'); break;
-    default:     list = TASKS.filter(t => t.status !== 'done');
+    case 'akut':      list = TASKS.filter(t => t.prio === 'akut' && t.status !== 'done'); break;
+    case 'open':      list = TASKS.filter(t => t.status === 'open'); break;
+    case 'done':      list = TASKS.filter(t => t.status === 'done'); break;
+    case 'escalated': list = TASKS.filter(t => t.status === 'open' && minutesOpen(t) > 15); break;
+    default:          list = TASKS.filter(t => t.status !== 'done');
   }
   return list.sort((a, b) => PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio]);
 }
@@ -131,10 +134,14 @@ function markDone(id) {
   // Optimistic UI — visually mark done immediately
   const prevStatus   = t.status;
   const prevAssignee = t.assignee;
-  t.status   = 'done';
-  t.assignee = t.assignee ?? 'Manuel';
+  const prevCompletedAt = t.completedAt;
+  t.status      = 'done';
+  t.assignee    = t.assignee ?? 'Manuel';
+  t.completedAt = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+  t.durationMin = null;
   renderPlannerTasks();
   updateStats();
+  renderActivityLog();
 
   // Deferred commit with undo window (5 sec)
   let committed = false;
@@ -148,10 +155,13 @@ function markDone(id) {
       // Undo: revert if not yet committed
       if (!committed) {
         clearTimeout(undoTimer);
-        t.status   = prevStatus;
-        t.assignee = prevAssignee;
+        t.status      = prevStatus;
+        t.assignee    = prevAssignee;
+        t.completedAt = prevCompletedAt;
+        t.durationMin = null;
         renderPlannerTasks();
         updateStats();
+        renderActivityLog();
         toast('Fortryd udført', 'Opgaven er gendannet.', 'blue');
       }
     }
@@ -176,6 +186,7 @@ function confirmDelete() {
   closeModal('modal-delete');
   renderPlannerTasks();
   updateStats();
+  renderActivityLog();
 
   if (!snap) return;
 
@@ -194,6 +205,7 @@ function confirmDelete() {
         TASKS.splice(insertAt, 0, snap);
         renderPlannerTasks();
         updateStats();
+        renderActivityLog();
         toast('Fortryd udført', 'Opgaven er gendannet.', 'blue');
       }
     }
@@ -297,6 +309,7 @@ function addTask() {
 
   renderPlannerTasks();
   updateStats();
+  renderActivityLog();
 
   toast(
     selPrioVal === 'akut' ? 'Akut opgave oprettet' : 'Opgave oprettet',
@@ -314,9 +327,25 @@ function scrollToCreate() {
    AKUT KALD
 ──────────────────────────────────────────── */
 
-function fireAkutKald() {
+function confirmAkutKald() {
   const dept = document.getElementById('akut-dept').value;
   const msg  = document.getElementById('akut-msg').value.trim();
+  pendingAkutDept = dept;
+  pendingAkutMsg  = msg;
+  document.getElementById('akut-confirm-desc').textContent =
+    `Afdeling: ${dept} · Besked: "${msg}" — Dette sender en notifikation til alle aktive prøvetagere.`;
+  closeModal('modal-akut');
+  openModal('modal-akut-confirm');
+}
+
+function fireAkutKald() {
+  const dept = pendingAkutDept;
+  const msg  = pendingAkutMsg;
+  pendingAkutDept = null;
+  pendingAkutMsg  = null;
+
+  if (!dept) return;
+
   const now  = new Date();
   const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
@@ -326,7 +355,7 @@ function fireAkutKald() {
     status: 'open', assignee: null, time,
   });
 
-  closeModal('modal-akut');
+  closeModal('modal-akut-confirm');
   renderPlannerTasks();
   updateStats();
   toast('Akut kald sendt', `${dept} · Alle prøvetagere notificeret`, 'red');
@@ -344,6 +373,14 @@ function renderStaff() {
   const STATE_CLS   = { free: 'ss-free', busy: 'ss-busy', break: 'ss-break' };
 
   STAFF.forEach(s => {
+    const shortName = s.name.split(' ')[0] + ' ' + (s.name.split(' ')[1]?.[0] ?? '') + '.';
+    const activeTask = TASKS.find(t => t.status === 'taken' && t.assignee === shortName);
+    const taskLine = activeTask
+      ? `<div class="staff-task-line">📍 ${activeTask.dept} · ${activeTask.type}</div>`
+      : s.state === 'free'
+        ? `<div class="staff-task-line" style="color:var(--gray-300);">Ingen aktiv opgave</div>`
+        : '';
+
     const row = document.createElement('div');
     row.className = 'staff-row';
     row.innerHTML = `
@@ -351,8 +388,57 @@ function renderStaff() {
       <div class="staff-info">
         <div class="staff-name">${s.name}</div>
         <div class="staff-dept">${s.dept}</div>
+        ${taskLine}
       </div>
       <span class="badge ${STATE_CLS[s.state]}" style="font-size:.6875rem;">${STATE_LABEL[s.state]}</span>`;
     list.appendChild(row);
   });
+}
+
+/* ────────────────────────────────────────────
+   AKTIVITETSLOG
+──────────────────────────────────────────── */
+
+function renderActivityLog() {
+  const logList = document.getElementById('activity-log-list');
+  const summary = document.getElementById('activity-summary');
+  if (!logList || !summary) return;
+
+  const done = TASKS
+    .filter(t => t.status === 'done')
+    .sort((a, b) => {
+      if (!a.completedAt && !b.completedAt) return 0;
+      if (!a.completedAt) return 1;
+      if (!b.completedAt) return -1;
+      return b.completedAt.localeCompare(a.completedAt);
+    });
+
+  if (done.length === 0) {
+    logList.innerHTML = '<div class="activity-empty">Ingen færdige opgaver endnu i dag.</div>';
+    summary.textContent = '0 opgaver færdige';
+    return;
+  }
+
+  logList.innerHTML = '';
+  done.forEach(t => {
+    const row = document.createElement('div');
+    row.className = `activity-row${t.prio === 'akut' ? ' akut' : ''}`;
+    row.innerHTML = `
+      <div class="activity-time">${t.completedAt ?? '–'}</div>
+      <div class="activity-info">
+        <div class="activity-title">${t.assignee ?? '–'} · ${t.dept}</div>
+        <div class="activity-sub">${t.type} · ${PRIO_LABEL[t.prio]}</div>
+      </div>
+      <div class="activity-duration">${t.durationMin != null ? t.durationMin + ' min' : '–'}</div>`;
+    logList.appendChild(row);
+  });
+
+  const akutCount = done.filter(t => t.prio === 'akut').length;
+  const withDuration = done.filter(t => t.durationMin != null);
+  const avgMin = withDuration.length
+    ? (withDuration.reduce((s, t) => s + t.durationMin, 0) / withDuration.length).toFixed(1)
+    : null;
+  summary.textContent =
+    `${done.length} opgaver færdige · ${akutCount} akutte` +
+    (avgMin !== null ? ` · Gns. ${avgMin} min` : '');
 }

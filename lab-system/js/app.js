@@ -57,6 +57,7 @@ function doLogin() {
     renderPlannerTasks();
     renderStaff();
     updateStats();
+    renderActivityLog();
 
   } else {
     const staffMember = STAFF.find(s => s.name === currentUser);

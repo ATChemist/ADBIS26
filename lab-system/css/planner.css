@@ -206,3 +206,71 @@
   .login-card { padding: 1.75rem 1.25rem; }
   .role-grid  { grid-template-columns: 1fr; }
 }
+
+/* ────────────────────────────
+   AKTIVITETSLOG
+──────────────────────────── */
+.activity-section {
+  margin-top: 2rem;
+}
+
+.activity-log-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .75rem 1.25rem;
+  border-bottom: 1px solid var(--gray-100);
+  transition: background .1s;
+}
+.activity-row:last-child { border-bottom: none; }
+.activity-row:hover { background: var(--gray-50); }
+.activity-row.akut { border-left: 3px solid var(--red-500); }
+
+.activity-time {
+  font-size: .8125rem;
+  font-weight: 700;
+  color: var(--gray-400);
+  min-width: 40px;
+}
+
+.activity-info { flex: 1; min-width: 0; }
+.activity-title {
+  font-size: .8125rem;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+.activity-sub {
+  font-size: .75rem;
+  color: var(--gray-400);
+  margin-top: 1px;
+}
+
+.activity-duration {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--gray-400);
+  background: var(--gray-100);
+  border-radius: 99px;
+  padding: .125rem .5rem;
+  white-space: nowrap;
+}
+
+.activity-summary {
+  font-size: .75rem;
+  color: var(--gray-400);
+  font-weight: 500;
+}
+
+.activity-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--gray-300);
+  font-size: .875rem;
+}

@@ -339,6 +339,19 @@
 .toast-undo-btn:hover { background: var(--blue-50); }
 
 /* ────────────────────────────
+   FEATURE: STAFF TASK LINE
+──────────────────────────── */
+.staff-task-line {
+  font-size: .6875rem;
+  color: var(--gray-400);
+  margin-top: .125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* ────────────────────────────
    FEATURE: COMPETENCE CHIP
 ──────────────────────────── */
 .competence-info-chip {
