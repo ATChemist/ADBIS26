@@ -1,6 +1,6 @@
 /**
  * worker.js  –  Worker (prøvetager) page: state & rendering
- * LabSystem · Herlev Hospital
+ * LabSystem · Hillerød Hospital
  */
 
 'use strict';

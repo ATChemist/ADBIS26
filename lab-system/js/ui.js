@@ -1,6 +1,6 @@
 /**
  * ui.js  –  Shared UI utilities: Toast & Modal
- * LabSystem · Herlev Hospital
+ * LabSystem · Hillerød Hospital
  */
 
 'use strict';

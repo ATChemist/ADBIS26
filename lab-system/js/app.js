@@ -1,7 +1,7 @@
 /**
  * app.js  –  Application entry point
  * Handles login, page routing, and the live clock.
- * LabSystem · Herlev Hospital
+ * LabSystem · Hillerød Hospital
  */
 
 'use strict';
