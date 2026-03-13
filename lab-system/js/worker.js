@@ -13,6 +13,8 @@ let workerBusy   = false;
 let myDoneCount  = 0;
 let wFilterMode  = 'alle'; // 'alle' | 'akut' | 'fremsk' | 'rutine'
 let taskTransitionLock = false;
+let activeTaskStartTime = null;
+let timerInterval = null;
 
 const PRIO_ORDER_W = { akut: 0, fremsk: 1, udskr: 2, rutine: 3 };
 const PRIO_LABEL_W = { akut: 'Akut', fremsk: 'Fremskyndet', udskr: 'Udskrivning', rutine: 'Rutine' };
@@ -76,6 +78,8 @@ function initWorkerPage(userName) {
   myDoneCount  = 0;
   wFilterMode  = 'alle';
   taskTransitionLock = false;
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  activeTaskStartTime = null;
 
   setFreeUI();
   renderWorkerTasks();
@@ -91,6 +95,14 @@ function renderWorkerTasks() {
   const myCompetences = getCurrentWorker()?.competences ?? [];
   const workerName = currentWorkerShortName();
 
+  // Feature 2: count all non-done tasks ignoring competence
+  const allNonDone = state.tasks.filter(t => {
+    if (t.status === 'done') return false;
+    if (state.activeTask?.id === t.id && t.assignee === workerName) return false;
+    return true;
+  });
+  const totalOpen = allNonDone.length;
+
   let filtered = state.tasks.filter(t => {
     if (t.status === 'done') return false;
     if (state.activeTask?.id === t.id && t.assignee === workerName) return false;
@@ -101,6 +113,18 @@ function renderWorkerTasks() {
     if (wFilterMode === 'rutine') return t.prio === 'rutine' || t.prio === 'udskr';
     return true;
   });
+
+  // Feature 2: competence visibility counter
+  const visibleCount = filtered.length;
+  const hiddenCount = totalOpen - visibleCount;
+  const infoEl = document.getElementById('worker-competence-info');
+  if (infoEl) {
+    if (hiddenCount > 0) {
+      infoEl.innerHTML = `<div style="display:inline-block;background:var(--gray-100);color:var(--gray-500);font-size:0.75rem;padding:0.25rem 0.75rem;border-radius:999px;margin-bottom:0.75rem;">Viser ${visibleCount} af ${totalOpen} opgaver – ${hiddenCount} kræver kompetencer du ikke har</div>`;
+    } else {
+      infoEl.innerHTML = '';
+    }
+  }
 
   filtered.sort((a, b) => PRIO_ORDER_W[a.prio] - PRIO_ORDER_W[b.prio]);
 
@@ -182,6 +206,12 @@ function takeTask(id) {
     t.assignee = currentWorkerShortName();
     state.activeTask = t;
 
+    // Feature 4: start timer
+    activeTaskStartTime = Date.now();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(updateActiveTimer, 1000);
+    updateActiveTimer();
+
     syncCurrentWorkerState('busy', t.dept);
     setWorkerBusyUI(t);
     renderWorkerTasks();
@@ -197,6 +227,10 @@ function workerDone(id) {
   animateTaskTransition(id, 'task-complete', () => {
     t.status = 'done';
     myDoneCount++;
+
+    // Feature 4: clear timer
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    activeTaskStartTime = null;
 
     if (state.activeTask?.id === id) {
       state.activeTask = null;
@@ -237,6 +271,12 @@ function setWorkerBusyUI(t) {
 
 function setFreeUI() {
   workerBusy = false;
+  // Feature 4: clear timer
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  activeTaskStartTime = null;
+  const timerEl = document.getElementById('atb-timer');
+  if (timerEl) timerEl.textContent = '';
+
   document.getElementById('si-dot').className          = 'si-dot free';
   document.getElementById('si-text').textContent       = 'Fri – klar til opgaver';
   document.getElementById('si-sub').textContent        = 'Ingen aktiv opgave';
@@ -283,6 +323,15 @@ function currentWorkerShortName() {
   if (!state.currentUser) return '';
   const parts = state.currentUser.split(' ');
   return parts[0] + ' ' + (parts[1]?.[0] ?? '') + '.';
+}
+
+function updateActiveTimer() {
+  const timerEl = document.getElementById('atb-timer');
+  if (!timerEl || !activeTaskStartTime) return;
+  const elapsed = Math.floor((Date.now() - activeTaskStartTime) / 1000);
+  const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const secs = String(elapsed % 60).padStart(2, '0');
+  timerEl.textContent = `Aktiv i ${mins}:${secs}`;
 }
 
 function updateWorkerStats() {

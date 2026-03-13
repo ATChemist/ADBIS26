@@ -13,6 +13,8 @@ let taskFilter    = 'all';   // 'all' | 'akut' | 'open' | 'done'
 let selPrioVal    = 'rutine';
 let assignTarget  = null;    // task id awaiting assignment
 let deleteTarget  = null;    // task id awaiting delete confirmation
+let _undoMarkDoneTimer = null;
+let _undoDeleteTimer   = null;
 
 /** Priority sort order */
 const PRIO_ORDER = { akut: 0, fremsk: 1, udskr: 2, rutine: 3 };
@@ -50,9 +52,30 @@ function getFilteredTasks() {
   return list.sort((a, b) => PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio]);
 }
 
+function minutesOpen(task) {
+  if (!task.time) return 0;
+  const [h, m] = task.time.split(':').map(Number);
+  const now = new Date();
+  const taskMinutes = h * 60 + m;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  if (nowMinutes < taskMinutes) return 0;
+  return nowMinutes - taskMinutes;
+}
+
 function renderPlannerTasks() {
   const list    = document.getElementById('planner-task-list');
   const sorted  = getFilteredTasks();
+
+  // Feature 5: sort escalated open tasks above non-escalated (but below akut)
+  sorted.sort((a, b) => {
+    const pa = PRIO_ORDER[a.prio], pb = PRIO_ORDER[b.prio];
+    if (pa !== pb) return pa - pb;
+    // Within same priority, escalated first
+    const aEsc = a.status === 'open' && minutesOpen(a) > 15 ? 0 : 1;
+    const bEsc = b.status === 'open' && minutesOpen(b) > 15 ? 0 : 1;
+    return aEsc - bEsc;
+  });
+
   document.getElementById('task-count-badge').textContent = sorted.length;
 
   if (sorted.length === 0) {
@@ -77,6 +100,10 @@ function renderPlannerTasks() {
     const noteChip = t.note
       ? `<span class="task-note-chip">📝 ${t.note}</span>` : '';
 
+    // Feature 5: escalation badge
+    const escalated = t.status === 'open' && minutesOpen(t) > 15;
+    const escalationBadge = escalated ? '<span class="badge badge-amber">⏳ Afventer længe</span>' : '';
+
     const row = document.createElement('div');
     row.className = `task-row task-card ${t.prio}${t.prio === 'akut' && t.status !== 'done' ? ' task-akut' : ''}${t.status === 'done' ? ' done-row' : ''}`;
     row.innerHTML = `
@@ -86,6 +113,7 @@ function renderPlannerTasks() {
         <div class="task-meta-row">
           <span class="task-meta-chip">⏱ ${t.deadline}</span>
           <span class="badge ${PRIO_BADGE[t.prio]}">${PRIO_LABEL[t.prio]}</span>
+          ${escalationBadge}
           ${noteChip}
         </div>
       </div>
@@ -121,12 +149,35 @@ function setFilter(f, el) {
 function markDone(id) {
   const t = state.tasks.find(x => x.id === id);
   if (!t) return;
+
+  // Save original state for undo
+  const prevStatus = t.status;
+  const prevAssignee = t.assignee;
+  const prevActiveTask = state.activeTask;
+
+  // Optimistic UI: visually mark as done
   t.status   = 'done';
   t.assignee = t.assignee ?? 'Manuel';
   if (state.activeTask?.id === id) state.activeTask = null;
   renderPlannerTasks();
   updateStats();
-  toast('Opgave færdig', `${t.dept} markeret som færdig.`, 'green');
+
+  // Deferred commit with undo
+  _undoMarkDoneTimer = setTimeout(() => {
+    _undoMarkDoneTimer = null;
+    // Data already set — no further action needed
+  }, 5000);
+
+  toast('Opgave markeret færdig', `${t.dept} markeret som færdig.`, 'green', () => {
+    // Undo: revert data
+    clearTimeout(_undoMarkDoneTimer);
+    _undoMarkDoneTimer = null;
+    t.status = prevStatus;
+    t.assignee = prevAssignee;
+    state.activeTask = prevActiveTask;
+    renderPlannerTasks();
+    updateStats();
+  });
 }
 
 function openDeleteModal(id) {
@@ -135,14 +186,38 @@ function openDeleteModal(id) {
 }
 
 function confirmDelete() {
-  if (deleteTarget !== null) {
-    state.tasks = state.tasks.filter(x => x.id !== deleteTarget);
-    if (state.activeTask?.id === deleteTarget) state.activeTask = null;
-    deleteTarget = null;
-  }
+  const idToDelete = deleteTarget;
+  if (idToDelete === null) { closeModal('modal-delete'); return; }
+  deleteTarget = null;
+
+  const taskIndex = state.tasks.findIndex(x => x.id === idToDelete);
+  const taskCopy = taskIndex >= 0 ? { ...state.tasks[taskIndex] } : null;
+  const prevActiveTask = state.activeTask;
+
+  // Optimistic UI: remove from array
+  if (taskIndex >= 0) state.tasks.splice(taskIndex, 1);
+  if (state.activeTask?.id === idToDelete) state.activeTask = null;
+
   closeModal('modal-delete');
   renderPlannerTasks();
   updateStats();
+
+  // Deferred commit with undo
+  _undoDeleteTimer = setTimeout(() => {
+    _undoDeleteTimer = null;
+  }, 5000);
+
+  toast('Opgave slettet', '', 'red', () => {
+    // Undo: restore task
+    clearTimeout(_undoDeleteTimer);
+    _undoDeleteTimer = null;
+    if (taskCopy) {
+      state.tasks.splice(taskIndex, 0, taskCopy);
+      state.activeTask = prevActiveTask;
+    }
+    renderPlannerTasks();
+    updateStats();
+  });
 }
 
 function openAssignModal(id) {
@@ -150,6 +225,41 @@ function openAssignModal(id) {
   const t = state.tasks.find(x => x.id === id);
   document.getElementById('assign-desc').textContent =
     `Tildel: "${t.type}" på ${t.dept}`;
+
+  // Feature 3: dynamically populate select with state indicators
+  const sel = document.getElementById('assign-select');
+  sel.innerHTML = '';
+  state.workers.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.name;
+    let label = s.name;
+    if (s.state === 'busy') { label += ' (optaget \u{1F534})'; opt.dataset.state = 'busy'; }
+    else if (s.state === 'break') { label += ' (pause \u{1F7E1})'; opt.dataset.state = 'break'; }
+    opt.textContent = label;
+    sel.appendChild(opt);
+  });
+
+  const warning = document.getElementById('assign-warning');
+  warning.style.display = 'none';
+  warning.textContent = '';
+
+  // Show warning on change
+  sel.onchange = function() {
+    const opt = sel.options[sel.selectedIndex];
+    if (opt?.dataset.state === 'busy') {
+      warning.textContent = '\u26A0\uFE0F Denne prøvetager er allerede i gang med en opgave.';
+      warning.style.display = 'block';
+    } else if (opt?.dataset.state === 'break') {
+      warning.textContent = '\u26A0\uFE0F Denne prøvetager er på pause.';
+      warning.style.display = 'block';
+    } else {
+      warning.style.display = 'none';
+    }
+  };
+
+  // Trigger initial check
+  sel.onchange();
+
   openModal('modal-assign');
 }
 
