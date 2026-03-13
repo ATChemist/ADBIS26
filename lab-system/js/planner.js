@@ -78,7 +78,7 @@ function renderPlannerTasks() {
       ? `<span class="task-note-chip">📝 ${t.note}</span>` : '';
 
     const row = document.createElement('div');
-    row.className = `task-row ${t.prio}${t.status === 'done' ? ' done-row' : ''}`;
+    row.className = `task-row task-card ${t.prio}${t.prio === 'akut' && t.status !== 'done' ? ' task-akut' : ''}${t.status === 'done' ? ' done-row' : ''}`;
     row.innerHTML = `
       <div class="task-dot-col"><div class="prio-dot ${t.prio}"></div></div>
       <div class="task-info-col">

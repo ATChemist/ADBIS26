@@ -11,6 +11,16 @@
   box-shadow: var(--shadow-sm);
 }
 
+.task-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
 /* ── Divider ── */
 .divider {
   height: 1px;

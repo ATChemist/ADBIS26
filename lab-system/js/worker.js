@@ -12,10 +12,12 @@
 let workerBusy   = false;
 let myDoneCount  = 0;
 let wFilterMode  = 'alle'; // 'alle' | 'akut' | 'fremsk' | 'rutine'
+let taskTransitionLock = false;
 
 const PRIO_ORDER_W = { akut: 0, fremsk: 1, udskr: 2, rutine: 3 };
 const PRIO_LABEL_W = { akut: 'Akut', fremsk: 'Fremskyndet', udskr: 'Udskrivning', rutine: 'Rutine' };
 const PRIO_BADGE_W = { akut: 'badge-red', fremsk: 'badge-orange', udskr: 'badge-amber', rutine: 'badge-gray' };
+const TASK_TRANSITION_MS = 350;
 
 function getCurrentWorker() {
   return state.workers.find(s => s.name === state.currentUser);
@@ -26,6 +28,35 @@ function syncCurrentWorkerState(nextState, dept) {
   if (!worker) return;
   worker.state = nextState;
   worker.dept = dept;
+}
+
+function animateTaskTransition(id, className, onComplete) {
+  const card = document.getElementById(`wc-${id}`);
+  const banner = document.getElementById('active-task-banner');
+  const target = card ?? (className === 'task-complete' && banner?.style.display !== 'none' ? banner : null);
+
+  if (!target) {
+    onComplete();
+    return;
+  }
+
+  taskTransitionLock = true;
+  const buttons = Array.from(target.querySelectorAll('button'));
+  buttons.forEach(button => {
+    button.disabled = true;
+  });
+  target.classList.remove('task-taken', 'task-complete');
+  void target.offsetWidth;
+  target.classList.add(className);
+
+  window.setTimeout(() => {
+    onComplete();
+    target.classList.remove(className);
+    buttons.forEach(button => {
+      button.disabled = false;
+    });
+    taskTransitionLock = false;
+  }, TASK_TRANSITION_MS);
 }
 
 /* ────────────────────────────────────────────
@@ -44,6 +75,7 @@ function initWorkerPage(userName) {
   state.activeTask = null;
   myDoneCount  = 0;
   wFilterMode  = 'alle';
+  taskTransitionLock = false;
 
   setFreeUI();
   renderWorkerTasks();
@@ -57,9 +89,11 @@ function initWorkerPage(userName) {
 function renderWorkerTasks() {
   const list = document.getElementById('worker-task-list');
   const myCompetences = getCurrentWorker()?.competences ?? [];
+  const workerName = currentWorkerShortName();
 
   let filtered = state.tasks.filter(t => {
     if (t.status === 'done') return false;
+    if (state.activeTask?.id === t.id && t.assignee === workerName) return false;
     // Only show tasks for departments this worker is competent in
     if (myCompetences.length > 0 && !myCompetences.some(c => t.dept.startsWith(c))) return false;
     if (wFilterMode === 'akut')   return t.prio === 'akut';
@@ -84,7 +118,7 @@ function renderWorkerTasks() {
 
   list.innerHTML = '';
   filtered.forEach(t => {
-    const isOwn = t.assignee && t.assignee === currentWorkerShortName();
+    const isOwn = t.assignee && t.assignee === workerName;
 
     let actionsHtml;
     if (t.status === 'open') {
@@ -102,7 +136,7 @@ function renderWorkerTasks() {
     }
 
     const card = document.createElement('div');
-    card.className = `worker-task-card ${t.prio}`;
+    card.className = `worker-task-card task-card ${t.prio}${t.prio === 'akut' ? ' task-akut' : ''}`;
     card.id = `wc-${t.id}`;
     card.innerHTML = `
       <div class="wtc-inner">
@@ -135,6 +169,7 @@ function renderWorkerTasks() {
 ──────────────────────────────────────────── */
 
 function takeTask(id) {
+  if (taskTransitionLock) return;
   if (workerBusy && state.activeTask) {
     toast('Du er allerede optaget', 'Færdiggør din nuværende opgave først.', 'amber');
     return;
@@ -142,33 +177,40 @@ function takeTask(id) {
   const t = state.tasks.find(x => x.id === id);
   if (!t || t.status !== 'open') return;
 
-  t.status   = 'taken';
-  t.assignee = currentWorkerShortName();
-  state.activeTask = t;
+  animateTaskTransition(id, 'task-taken', () => {
+    t.status   = 'taken';
+    t.assignee = currentWorkerShortName();
+    state.activeTask = t;
 
-  syncCurrentWorkerState('busy', t.dept);
-  setWorkerBusyUI(t);
-  renderWorkerTasks();
-  toast('Opgave taget', `${t.dept} · ${t.deadline}`, 'blue');
+    syncCurrentWorkerState('busy', t.dept);
+    setWorkerBusyUI(t);
+    renderWorkerTasks();
+    toast('Opgave taget', `${t.dept} · ${t.deadline}`, 'blue');
+  });
 }
 
 function workerDone(id) {
+  if (taskTransitionLock) return;
   const t = state.tasks.find(x => x.id === id);
   if (!t) return;
-  t.status = 'done';
-  myDoneCount++;
 
-  if (state.activeTask?.id === id) {
-    state.activeTask = null;
-    syncCurrentWorkerState('free', 'Ledig');
-    setFreeUI();
-  }
-  renderWorkerTasks();
-  updateStats();  // also update planner stats
-  toast('Opgave færdig 🎉', `${t.dept} er markeret som færdig.`, 'green');
+  animateTaskTransition(id, 'task-complete', () => {
+    t.status = 'done';
+    myDoneCount++;
+
+    if (state.activeTask?.id === id) {
+      state.activeTask = null;
+      syncCurrentWorkerState('free', 'Ledig');
+      setFreeUI();
+    }
+    renderWorkerTasks();
+    updateStats();  // also update planner stats
+    toast('Opgave færdig 🎉', `${t.dept} er markeret som færdig.`, 'green');
+  });
 }
 
 function completeActiveTask() {
+  if (taskTransitionLock) return;
   if (state.activeTask) workerDone(state.activeTask.id);
 }
 
