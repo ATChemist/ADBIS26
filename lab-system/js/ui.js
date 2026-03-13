@@ -18,7 +18,7 @@ const TOAST_ICON   = { blue: 'ℹ️', red: '⚠️', green: '✓',        amber
  * @param {string} [body]
  * @param {'blue'|'red'|'green'|'amber'} [type]
  */
-function toast(title, body = '', type = 'blue') {
+function toast(title, body = '', type = 'blue', undoCallback = null) {
   const container = document.getElementById('toast-container');
   const el = document.createElement('div');
   el.className = 'toast-item' + (TOAST_BORDER[type] ?? '');
@@ -29,8 +29,23 @@ function toast(title, body = '', type = 'blue') {
       ${body ? `<div class="toast-sub">${body}</div>` : ''}
     </div>
     <button class="toast-close-btn" aria-label="Luk" onclick="dismissToast(this.closest('.toast-item'))">×</button>`;
+
+  if (undoCallback) {
+    const undoBtn = document.createElement('button');
+    undoBtn.className = 'btn btn-ghost btn-sm toast-undo-btn';
+    undoBtn.style.cssText = 'margin-left:auto; font-weight:600; color:var(--blue-600); text-decoration:underline; cursor:pointer; background:none; border:none; padding:0.25rem 0.5rem;';
+    undoBtn.textContent = 'Fortryd';
+    undoBtn.addEventListener('click', () => {
+      undoCallback();
+      dismissToast(el);
+    });
+    el.querySelector('.toast-body').appendChild(undoBtn);
+  }
+
   container.appendChild(el);
-  setTimeout(() => dismissToast(el), 4500);
+  const autoTimer = setTimeout(() => dismissToast(el), undoCallback ? 5500 : 4500);
+  el._autoTimer = autoTimer;
+  return el;
 }
 
 /**

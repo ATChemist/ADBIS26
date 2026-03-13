@@ -38,14 +38,9 @@
     <div class="modal-body">
       <div class="field">
         <label class="label" for="assign-select">Prøvetager</label>
-        <select class="select" id="assign-select">
-          <option>Sofia A.</option>
-          <option>Marcus K.</option>
-          <option>Lena T.</option>
-          <option>Jonas P.</option>
-          <option>Rania N.</option>
-        </select>
+        <select class="select" id="assign-select"></select>
       </div>
+      <div id="assign-warning" style="display:none; margin-top:0.5rem; padding:0.5rem 0.75rem; background:var(--amber-50); border:1px solid var(--amber-200); border-radius:var(--r); font-size:0.8125rem; color:var(--amber-700);"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-primary"   onclick="confirmAssign()">Tildel opgave</button>
@@ -416,7 +411,7 @@
             <div>
               <div class="atb-label">Aktiv opgave</div>
               <div class="atb-task" id="atb-task-title">–</div>
-              <div class="atb-meta" id="atb-task-meta">–</div>
+              <div class="atb-meta" id="atb-task-meta">–</div><span id="atb-timer" style="font-size:0.75rem; color: var(--gray-400); margin-left: 0.5rem;"></span>
             </div>
           </div>
           <button class="btn btn-primary btn-sm" onclick="completeActiveTask()">
@@ -434,6 +429,9 @@
           <div class="chip" onclick="setWFilter('fremsk',this)">🟠 Fremskyndet</div>
           <div class="chip" onclick="setWFilter('rutine',this)">⚪ Rutine / Udskrivning</div>
         </div>
+
+        <!-- Competence info chip -->
+        <div id="worker-competence-info"></div>
 
         <!-- Task list -->
         <div id="worker-task-list"></div>
