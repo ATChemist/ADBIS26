@@ -1,0 +1,20 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Node (if a dev server or tooling is added later)
+node_modules/
+npm-debug.log*
+
+# Build output (if bundler added later)
+dist/
+build/
