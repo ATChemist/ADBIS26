@@ -13,6 +13,73 @@
 let currentRole = 'planner'; // 'planner' | 'worker'
 let currentUser = '';        // Full name of the logged-in user
 
+const DEV_PREVIEW_STORAGE_KEY = 'labSystem.devPhonePreview';
+const DEV_PREVIEW_HOSTS = new Set(['', '127.0.0.1', '::1', 'localhost']);
+
+/* ────────────────────────────────────────────
+   DEV PREVIEW
+──────────────────────────────────────────── */
+
+function shouldShowDevPreviewToggle() {
+  const params = new URLSearchParams(window.location.search);
+  return window.location.protocol === 'file:'
+    || DEV_PREVIEW_HOSTS.has(window.location.hostname)
+    || params.get('dev') === '1';
+}
+
+function readDevPreviewPreference() {
+  try {
+    return window.localStorage.getItem(DEV_PREVIEW_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeDevPreviewPreference(enabled) {
+  try {
+    window.localStorage.setItem(DEV_PREVIEW_STORAGE_KEY, enabled ? '1' : '0');
+  } catch {
+    // Ignore storage issues in restrictive browser contexts.
+  }
+}
+
+function setDevPhonePreview(enabled) {
+  document.body.classList.toggle('dev-phone-preview', enabled);
+
+  const toggle = document.getElementById('dev-preview-toggle');
+  const mode = document.getElementById('dev-preview-toggle-mode');
+
+  if (toggle) {
+    toggle.classList.toggle('is-active', enabled);
+    toggle.setAttribute('aria-pressed', String(enabled));
+  }
+  if (mode) {
+    mode.textContent = enabled ? 'Desktop' : 'Telefon';
+  }
+
+  writeDevPreviewPreference(enabled);
+}
+
+function toggleDevPhonePreview() {
+  setDevPhonePreview(!document.body.classList.contains('dev-phone-preview'));
+}
+
+function initDevPreview() {
+  const toggle = document.getElementById('dev-preview-toggle');
+  if (!toggle) return;
+
+  const enabled = shouldShowDevPreviewToggle();
+  toggle.classList.toggle('hidden', !enabled);
+
+  if (!enabled) {
+    document.body.classList.remove('dev-phone-preview');
+    return;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  setDevPhonePreview(params.get('phone') === '1' || readDevPreviewPreference());
+}
+
 /* ────────────────────────────────────────────
    LOGIN
 ──────────────────────────────────────────── */
@@ -132,6 +199,8 @@ function stopClock() {
 ──────────────────────────────────────────── */
 
 document.addEventListener('DOMContentLoaded', () => {
+  initDevPreview();
+
   // Set today's date in planner header
   document.getElementById('planner-date').textContent =
     new Date().toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });

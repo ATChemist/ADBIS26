@@ -23,6 +23,17 @@
 ══════════════════════════════════════════ -->
 <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
 
+<button
+  id="dev-preview-toggle"
+  class="dev-preview-toggle hidden"
+  type="button"
+  aria-pressed="false"
+  onclick="toggleDevPhonePreview()"
+>
+  <span class="dev-preview-toggle-label">Dev</span>
+  <span class="dev-preview-toggle-mode" id="dev-preview-toggle-mode">Telefon</span>
+</button>
+
 
 <!-- ══════════════════════════════════════════
      MODALS
@@ -131,6 +142,7 @@
 <!-- ══════════════════════════════════════════
      LOGIN VIEW
 ══════════════════════════════════════════ -->
+<div id="dev-preview-root">
 <div id="view-login">
   <div class="login-card">
 
@@ -478,6 +490,7 @@
   </main><!-- /#worker-page -->
 
 </div><!-- /#view-app -->
+</div><!-- /#dev-preview-root -->
 
 
 <!-- ══════════════════════════════════════════

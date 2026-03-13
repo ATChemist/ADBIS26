@@ -207,6 +207,71 @@
   .role-grid  { grid-template-columns: 1fr; }
 }
 
+body.dev-phone-preview #view-login {
+  align-items: stretch;
+  padding: 2rem 1rem 1rem;
+}
+body.dev-phone-preview .login-card {
+  padding: 1.75rem 1.25rem;
+  max-width: none;
+}
+body.dev-phone-preview .role-grid {
+  grid-template-columns: 1fr;
+}
+body.dev-phone-preview .planner-page-header h1 {
+  font-size: 1.25rem;
+}
+body.dev-phone-preview .stat-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+body.dev-phone-preview .planner-grid {
+  grid-template-columns: 1fr;
+}
+body.dev-phone-preview .right-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+body.dev-phone-preview .filter-tabs {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+body.dev-phone-preview .filter-tabs::-webkit-scrollbar {
+  display: none;
+}
+body.dev-phone-preview .create-row-2 {
+  grid-template-columns: 1fr;
+}
+body.dev-phone-preview .prio-pills {
+  grid-template-columns: repeat(2, 1fr);
+}
+body.dev-phone-preview .task-row {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+}
+body.dev-phone-preview .task-title-t {
+  white-space: normal;
+}
+body.dev-phone-preview .task-status-col {
+  grid-column: 2;
+  justify-self: start;
+}
+body.dev-phone-preview .task-actions-col {
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+}
+body.dev-phone-preview .task-note-chip {
+  max-width: 100%;
+}
+body.dev-phone-preview .activity-row {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+body.dev-phone-preview .activity-duration {
+  margin-left: auto;
+}
+
 /* ────────────────────────────
    AKTIVITETSLOG
 ──────────────────────────── */

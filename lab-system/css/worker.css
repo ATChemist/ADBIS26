@@ -142,3 +142,26 @@
 @media (max-width: 768px) {
   .worker-layout { grid-template-columns: 1fr; }
 }
+
+body.dev-phone-preview .worker-layout {
+  grid-template-columns: 1fr;
+}
+body.dev-phone-preview .status-toggle-row {
+  flex-direction: column;
+}
+body.dev-phone-preview .active-task-banner {
+  flex-direction: column;
+  align-items: stretch;
+}
+body.dev-phone-preview .atb-left {
+  align-items: flex-start;
+}
+body.dev-phone-preview .wtc-top-row {
+  flex-direction: column;
+}
+body.dev-phone-preview .wtc-actions {
+  flex-direction: column;
+}
+body.dev-phone-preview .wtc-actions .btn {
+  width: 100%;
+}
