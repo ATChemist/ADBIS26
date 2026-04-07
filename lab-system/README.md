@@ -1,4 +1,4 @@
-# LabSystem – Herlev Hospital
+# LabSystem – Hillerød Hospital
 
 Prototyp til intern opgavestyring for Klinisk Biokemisk Laboratorium, Region Hovedstaden.  
 Bygget som semesterprojekt på **BA-BINTO1801U – Analyse og design af brugervenlige informationssystemer**, CBS 2026.
