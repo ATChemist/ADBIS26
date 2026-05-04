@@ -476,3 +476,17 @@ body.dev-phone-preview .page-wrapper {
   border: 1px solid var(--gray-200);
   border-radius: 999px;
 }
+
+/* ────────────────────────────
+   ÆNDRING 5: TASK DETAIL GRID
+──────────────────────────── */
+.task-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+}
+.task-detail-item {
+  padding: .5rem .75rem;
+  background: var(--gray-50);
+  border-radius: var(--r-sm);
+}

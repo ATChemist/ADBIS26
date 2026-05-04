@@ -97,3 +97,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// Block ESC for the akut worker modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const akutModal = document.getElementById('modal-akut-worker');
+    if (akutModal?.classList.contains('open')) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }
+});

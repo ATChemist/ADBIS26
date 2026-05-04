@@ -19,6 +19,8 @@ let assignTarget  = null;    // task id awaiting assignment
 let deleteTarget  = null;    // task id awaiting delete confirmation
 let pendingAkutDept = null;  // dept stored while confirmation modal is open
 let pendingAkutMsg  = null;  // message stored while confirmation modal is open
+let assignMode      = 'single'; // 'single' | 'group'
+let remainingPatients = 197;
 
 /** Priority sort order */
 const PRIO_ORDER = { akut: 0, fremsk: 1, udskr: 2, rutine: 3 };
@@ -31,10 +33,77 @@ const PRIO_BADGE   = { akut: 'badge-red', fremsk: 'badge-orange', udskr: 'badge-
 ──────────────────────────────────────────── */
 
 function updateStats() {
+  const doneCount = TASKS.filter(t => t.status === 'done').length;
   document.getElementById('st-akut').textContent    = TASKS.filter(t => t.prio === 'akut'  && t.status !== 'done').length;
-  document.getElementById('st-done').textContent    = TASKS.filter(t => t.status === 'done').length;
+  document.getElementById('st-done').textContent    = doneCount;
   document.getElementById('st-pending').textContent = TASKS.filter(t => t.status === 'open').length;
   document.getElementById('st-active').textContent  = TASKS.filter(t => t.status === 'taken').length;
+
+  const remaining = Math.max(0, 197 - doneCount);
+  remainingPatients = remaining;
+  const stPatients = document.getElementById('st-patients');
+  if (stPatients) stPatients.textContent = remaining;
+  const hdr = document.getElementById('patient-count-hdr');
+  if (hdr) hdr.textContent = remaining + ' patienter i dag ▾';
+  const wpc = document.getElementById('worker-patient-count');
+  if (wpc) wpc.textContent = remaining;
+}
+
+function openDeptBreakdown(category) {
+  const titleEl = document.getElementById('dept-breakdown-title');
+  const descEl  = document.getElementById('dept-breakdown-desc');
+  const listEl  = document.getElementById('dept-breakdown-list');
+
+  const doneCount = TASKS.filter(t => t.status === 'done').length;
+  const remaining = Math.max(0, 197 - doneCount);
+
+  const doneByDept = {};
+  TASKS.filter(t => t.status === 'done').forEach(t => {
+    const dk = t.dept;
+    doneByDept[dk] = (doneByDept[dk] || 0) + 1;
+  });
+
+  let rows = [];
+
+  if (category === 'patients') {
+    titleEl.textContent = 'Patienter i dag — ' + remaining + ' resterende';
+    descEl.textContent  = 'Fordelt pr. afdeling (efter færdige prøver trukket fra)';
+    rows = DEPT_PATIENTS.map(d => {
+      const done = doneByDept[d.dept] || 0;
+      return { dept: d.dept, count: Math.max(0, d.count - done) };
+    });
+  } else {
+    const filterFn = {
+      akut:    t => t.prio === 'akut' && t.status !== 'done',
+      active:  t => t.status === 'taken',
+      done:    t => t.status === 'done',
+      pending: t => t.status === 'open',
+    }[category];
+    const labels = {
+      akut: 'Akutte opgaver', active: 'Igangværende opgaver',
+      done: 'Færdige opgaver', pending: 'Afventende opgaver',
+    };
+    titleEl.textContent = labels[category] || 'Fordeling';
+    descEl.textContent  = 'Fordelt pr. afdeling';
+
+    const byDept = {};
+    TASKS.filter(filterFn).forEach(t => {
+      byDept[t.dept] = (byDept[t.dept] || 0) + 1;
+    });
+    rows = Object.entries(byDept).map(([dept, count]) => ({ dept, count }));
+  }
+
+  rows.sort((a, b) => b.count - a.count);
+
+  listEl.innerHTML = rows.length === 0
+    ? '<div class="assign-group-empty">Ingen data</div>'
+    : rows.map(r => `
+        <div class="dept-breakdown-row">
+          <span class="dept-breakdown-name">${r.dept}</span>
+          <span class="dept-breakdown-count">${r.count}</span>
+        </div>`).join('');
+
+  openModal('modal-dept-breakdown');
 }
 
 /* ────────────────────────────────────────────
@@ -212,8 +281,36 @@ function confirmDelete() {
   );
 }
 
+function openGroupAssignModal() {
+  assignTarget = null;
+  assignMode = 'group';
+  document.getElementById('assign-title').textContent = 'Gruppetildeling';
+  document.getElementById('assign-desc').textContent  = 'Tildel alle opgaver i en afdeling til én prøvetager.';
+  document.getElementById('assign-tab-single').classList.remove('active');
+  document.getElementById('assign-tab-group').classList.add('active');
+  document.getElementById('assign-single-body').style.display = 'none';
+  document.getElementById('assign-group-body').style.display  = '';
+  const sel = document.getElementById('assign-group-worker');
+  sel.innerHTML = '';
+  STAFF.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.name;
+    const stateLabel = s.state === 'busy' ? ' (optaget 🔴)' : s.state === 'break' ? ' (pause 🟡)' : '';
+    opt.textContent = s.name + stateLabel;
+    sel.appendChild(opt);
+  });
+  renderGroupTasks();
+  openModal('modal-assign');
+}
+
 function openAssignModal(id) {
   assignTarget = id;
+  assignMode = 'single';
+  document.getElementById('assign-tab-single').classList.add('active');
+  document.getElementById('assign-tab-group').classList.remove('active');
+  document.getElementById('assign-single-body').style.display = '';
+  document.getElementById('assign-group-body').style.display  = 'none';
+  document.getElementById('assign-confirm-btn').textContent = 'Tildel opgave';
   const t = TASKS.find(x => x.id === id);
   document.getElementById('assign-desc').textContent =
     `Tildel: "${t.type}" på ${t.dept}`;
@@ -267,6 +364,10 @@ function minutesOpen(task) {
 }
 
 function confirmAssign() {
+  if (assignMode === 'group') {
+    confirmGroupAssign();
+    return;
+  }
   const t = TASKS.find(x => x.id === assignTarget);
   if (t) {
     t.assignee = document.getElementById('assign-select').value;
@@ -276,6 +377,77 @@ function confirmAssign() {
   closeModal('modal-assign');
   renderPlannerTasks();
   updateStats();
+}
+
+function setAssignMode(mode) {
+  assignMode = mode;
+  document.getElementById('assign-tab-single').classList.toggle('active', mode === 'single');
+  document.getElementById('assign-tab-group').classList.toggle('active', mode === 'group');
+  document.getElementById('assign-single-body').style.display = mode === 'single' ? '' : 'none';
+  document.getElementById('assign-group-body').style.display  = mode === 'group'  ? '' : 'none';
+
+  if (mode === 'group') {
+    const sel = document.getElementById('assign-group-worker');
+    sel.innerHTML = '';
+    STAFF.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      const stateLabel = s.state === 'busy' ? ' (optaget 🔴)' : s.state === 'break' ? ' (pause 🟡)' : '';
+      opt.textContent = s.name + stateLabel;
+      sel.appendChild(opt);
+    });
+    renderGroupTasks();
+  }
+  updateAssignButtonLabel();
+}
+
+function renderGroupTasks() {
+  const dept = document.getElementById('assign-group-dept').value;
+  const listEl = document.getElementById('assign-group-task-list');
+  const tasks = TASKS.filter(t => t.status === 'open' && t.dept === dept);
+
+  if (tasks.length === 0) {
+    listEl.innerHTML = '<div class="assign-group-empty">Ingen åbne opgaver i denne afdeling</div>';
+  } else {
+    listEl.innerHTML = tasks.map(t => `
+      <label class="assign-group-task-item">
+        <input type="checkbox" checked data-task-id="${t.id}" onchange="updateAssignButtonLabel()">
+        <span>${t.type} · ${PRIO_LABEL[t.prio]} · ${t.deadline}</span>
+      </label>`).join('');
+  }
+  updateAssignButtonLabel();
+}
+
+function updateAssignButtonLabel() {
+  const btn = document.getElementById('assign-confirm-btn');
+  if (assignMode === 'single') {
+    btn.textContent = 'Tildel opgave';
+    return;
+  }
+  const checked = document.querySelectorAll('#assign-group-task-list input[type="checkbox"]:checked');
+  const worker = document.getElementById('assign-group-worker')?.value || '–';
+  btn.textContent = `Tildel ${checked.length} opgaver til ${worker}`;
+}
+
+function confirmGroupAssign() {
+  const worker = document.getElementById('assign-group-worker').value;
+  const checkedEls = document.querySelectorAll('#assign-group-task-list input[type="checkbox"]:checked');
+  let count = 0;
+  checkedEls.forEach(cb => {
+    const id = Number(cb.dataset.taskId);
+    const t = TASKS.find(x => x.id === id);
+    if (t && t.status === 'open') {
+      t.assignee = worker;
+      t.status = 'taken';
+      count++;
+    }
+  });
+  closeModal('modal-assign');
+  renderPlannerTasks();
+  updateStats();
+  if (count > 0) {
+    toast('Gruppetildeling gennemført', `${count} opgaver tildelt til ${worker}.`, 'blue');
+  }
 }
 
 /* ────────────────────────────────────────────
@@ -359,6 +531,8 @@ function fireAkutKald() {
   renderPlannerTasks();
   updateStats();
   toast('Akut kald sendt', `${dept} · Alle prøvetagere notificeret`, 'red');
+
+  showWorkerAkutModal(dept, msg, TASKS[0].id);
 }
 
 /* ────────────────────────────────────────────

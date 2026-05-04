@@ -41,12 +41,20 @@
 
 <!-- Assign -->
 <div class="modal-backdrop" id="modal-assign" role="dialog" aria-modal="true" aria-labelledby="assign-title">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:500px;">
     <div class="modal-header">
       <div class="modal-title" id="assign-title">Tildel opgave</div>
       <div class="modal-desc"  id="assign-desc">Vælg hvilken prøvetager der skal tildeles denne opgave.</div>
     </div>
-    <div class="modal-body">
+
+    <!-- Ændring 4: Toggle mellem enkelt og gruppe -->
+    <div class="assign-mode-tabs">
+      <button class="assign-mode-tab active" id="assign-tab-single" onclick="setAssignMode('single')">Tildel enkelt opgave</button>
+      <button class="assign-mode-tab" id="assign-tab-group" onclick="setAssignMode('group')">Tildel afdeling som gruppe</button>
+    </div>
+
+    <!-- Enkelt-tildeling (eksisterende) -->
+    <div class="modal-body" id="assign-single-body">
       <div class="field">
         <label class="label" for="assign-select">Prøvetager</label>
         <select class="select" id="assign-select">
@@ -59,8 +67,34 @@
         <div id="assign-warning" style="display:none; margin-top:.5rem; padding:.5rem .75rem; background:#fef9c3; border:1px solid #fde047; border-radius:.375rem; font-size:.8125rem; color:#854d0e;"></div>
       </div>
     </div>
+
+    <!-- Gruppe-tildeling (nyt) -->
+    <div class="modal-body" id="assign-group-body" style="display:none;">
+      <div class="field">
+        <label class="label" for="assign-group-dept">Afdeling</label>
+        <select class="select" id="assign-group-dept" onchange="renderGroupTasks()">
+          <option>0141 – Kirurgisk</option>
+          <option>0312 – Intensiv</option>
+          <option>0440 – Psykiatrisk</option>
+          <option>0520 – Børneafdeling</option>
+          <option>0610 – Ortopædkirurgisk</option>
+          <option>0724 – Lunge / Infektiøs</option>
+          <option>0830 – Akutafdeling</option>
+          <option>0915 – Medicinsk</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="label">Opgaver i afdelingen</label>
+        <div id="assign-group-task-list" class="assign-group-task-list"></div>
+      </div>
+      <div class="field">
+        <label class="label" for="assign-group-worker">Prøvetager</label>
+        <select class="select" id="assign-group-worker"></select>
+      </div>
+    </div>
+
     <div class="modal-footer">
-      <button class="btn btn-primary"   onclick="confirmAssign()">Tildel opgave</button>
+      <button class="btn btn-primary" id="assign-confirm-btn" onclick="confirmAssign()">Tildel opgave</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-assign')">Annullér</button>
     </div>
   </div>
@@ -135,6 +169,54 @@
       <button class="btn btn-primary"   onclick="confirmWorkerDone()">Ja, opgave færdig</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-worker-done')">Annullér</button>
     </div>
+  </div>
+</div>
+
+<!-- Ændring 1: Blokerende akut-modal for prøvetager -->
+<div class="akut-fullscreen-modal" id="modal-akut-worker" role="alertdialog" aria-modal="true" aria-labelledby="akut-worker-title">
+  <div class="akut-fullscreen-inner">
+    <div class="akut-fullscreen-icon">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <div class="akut-fullscreen-label">AKUT KALD</div>
+    <div class="akut-fullscreen-dept" id="akut-worker-dept">–</div>
+    <div class="akut-fullscreen-msg" id="akut-worker-msg">–</div>
+    <div class="akut-fullscreen-actions">
+      <button class="btn btn-akut-accept" onclick="acceptAkutKald()">Acceptér opgave</button>
+      <button class="btn btn-akut-forward" onclick="forwardAkutKald()">Optaget — send videre</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ændring 2: Afdelingsfordeling panel -->
+<div class="modal-backdrop" id="modal-dept-breakdown" role="dialog" aria-modal="true" aria-labelledby="dept-breakdown-title">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="dept-breakdown-title">Afdelingsfordeling</div>
+      <div class="modal-desc" id="dept-breakdown-desc">Patienter fordelt pr. afdeling</div>
+    </div>
+    <div class="modal-body">
+      <div id="dept-breakdown-list" class="dept-breakdown-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-dept-breakdown')" style="flex:0 0 auto;">Luk</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ændring 5: Opgavedetalje-modal for prøvetager -->
+<div class="modal-backdrop" id="modal-task-detail" role="dialog" aria-modal="true" aria-labelledby="task-detail-title">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-header">
+      <div id="task-detail-badge"></div>
+      <div class="modal-title" id="task-detail-title" style="margin-top:.5rem;">–</div>
+      <div class="modal-desc" id="task-detail-type">–</div>
+    </div>
+    <div class="modal-body" id="task-detail-body"></div>
+    <div class="modal-footer" id="task-detail-footer"></div>
   </div>
 </div>
 
@@ -230,9 +312,15 @@
             Morgenrunde
             <span id="planner-date" style="color:var(--gray-400);font-weight:400;font-size:1.125rem;"></span>
           </h1>
-          <p>Klinisk Biokemisk Laboratorium · <span id="patient-count-hdr">197</span> patienter i dag</p>
+          <p>Klinisk Biokemisk Laboratorium · <span class="hdr-patient-link" onclick="openDeptBreakdown('patients')" id="patient-count-hdr">197 patienter i dag ▾</span></p>
         </div>
-        <div class="flex gap-3">
+        <div class="flex gap-3" style="flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="openGroupAssignModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+            Gruppetildeling
+          </button>
           <button class="btn btn-ghost" onclick="openModal('modal-akut')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
@@ -252,28 +340,28 @@
 
     <!-- Stats -->
     <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-label">Patienter i dag</div>
-        <div class="stat-value sv-blue">197</div>
-        <div class="stat-sub">Forventet antal</div>
+      <div class="stat-card stat-card-clickable" onclick="openDeptBreakdown('patients')" title="Klik for afdelingsfordeling">
+        <div class="stat-label">Patienter i dag <span class="stat-click-hint">▾</span></div>
+        <div class="stat-value sv-blue" id="st-patients">197</div>
+        <div class="stat-sub">Resterende</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Akutte</div>
+      <div class="stat-card stat-card-clickable" onclick="openDeptBreakdown('akut')" title="Klik for afdelingsfordeling">
+        <div class="stat-label">Akutte <span class="stat-click-hint">▾</span></div>
         <div class="stat-value sv-red" id="st-akut">3</div>
         <div class="stat-sub">Afventer svar</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">I gang</div>
+      <div class="stat-card stat-card-clickable" onclick="openDeptBreakdown('active')" title="Klik for afdelingsfordeling">
+        <div class="stat-label">I gang <span class="stat-click-hint">▾</span></div>
         <div class="stat-value sv-orange" id="st-active">8</div>
         <div class="stat-sub">Prøvetagere ude</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Færdige prøver</div>
+      <div class="stat-card stat-card-clickable" onclick="openDeptBreakdown('done')" title="Klik for afdelingsfordeling">
+        <div class="stat-label">Færdige prøver <span class="stat-click-hint">▾</span></div>
         <div class="stat-value sv-green" id="st-done">34</div>
         <div class="stat-sub">Taget i dag</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Afventer</div>
+      <div class="stat-card stat-card-clickable" onclick="openDeptBreakdown('pending')" title="Klik for afdelingsfordeling">
+        <div class="stat-label">Afventer <span class="stat-click-hint">▾</span></div>
         <div class="stat-value sv-amber" id="st-pending">5</div>
         <div class="stat-sub">Ikke taget endnu</div>
       </div>
@@ -471,6 +559,12 @@
             </svg>
             Markér færdig
           </button>
+        </div>
+
+        <!-- Ændring 3: Patient-tæller på worker-siden -->
+        <div class="worker-patient-counter" id="worker-patient-counter">
+          <span class="wpc-label">Resterende patienter i dag:</span>
+          <span class="wpc-value" id="worker-patient-count">197</span>
         </div>
 
         <!-- Filters -->

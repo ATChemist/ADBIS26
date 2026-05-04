@@ -74,3 +74,14 @@ const WORKER_USERS = [
   { name: 'Jonas P.'  },
   { name: 'Rania N.'  },
 ];
+
+const DEPT_PATIENTS = [
+  { dept: '0141 – Kirurgisk',        count: 32 },
+  { dept: '0312 – Intensiv',         count: 18 },
+  { dept: '0440 – Psykiatrisk',      count: 15 },
+  { dept: '0520 – Børneafdeling',    count: 22 },
+  { dept: '0610 – Ortopædkirurgisk', count: 28 },
+  { dept: '0724 – Lunge / Infektiøs',count: 25 },
+  { dept: '0830 – Akutafdeling',     count: 30 },
+  { dept: '0915 – Medicinsk',        count: 27 },
+];

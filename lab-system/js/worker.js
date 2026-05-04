@@ -16,6 +16,7 @@ let wFilterMode       = 'alle'; // 'alle' | 'akut' | 'fremsk' | 'rutine'
 let activeTaskStartTime = null; // Feature 4: timestamp when task was taken
 let timerInterval     = null;   // Feature 4: setInterval handle
 let workerDoneTarget  = null;   // id of task pending done-confirmation
+let pendingAkutTaskId = null;   // task id from an incoming akut kald
 
 const PRIO_ORDER_W = { akut: 0, fremsk: 1, udskr: 2, rutine: 3 };
 const PRIO_LABEL_W = { akut: 'Akut', fremsk: 'Fremskyndet', udskr: 'Udskrivning', rutine: 'Rutine' };
@@ -121,20 +122,21 @@ function renderWorkerTasks() {
     const card = document.createElement('div');
     card.className = `worker-task-card ${t.prio}`;
     card.id = `wc-${t.id}`;
+    card.onclick = (e) => { if (!e.target.closest('.wtc-actions')) openTaskDetail(t.id); };
     card.innerHTML = `
       <div class="wtc-inner">
         <div class="wtc-top-row">
           <div>
-            <span class="badge ${PRIO_BADGE_W[t.prio]}">${PRIO_LABEL_W[t.prio]}</span>
+            <span class="badge ${PRIO_BADGE_W[t.prio]}" style="font-size:.75rem;padding:.25rem .625rem;">${PRIO_LABEL_W[t.prio]}</span>
             ${isOwn ? '<span class="badge badge-blue" style="margin-left:.25rem;">Min opgave</span>' : ''}
           </div>
-          <span style="font-size:.6875rem;color:var(--gray-400);">${t.time}</span>
+          <span style="font-size:.75rem;color:var(--gray-400);">${t.time}</span>
         </div>
         <div class="wtc-title-t">${t.dept}</div>
         <div class="wtc-type-t">${t.type}</div>
         <div class="wtc-meta-row">
           <div class="wtc-meta-item">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             ${t.deadline}
           </div>
         </div>
@@ -306,4 +308,79 @@ function updateWorkerStats() {
   const active = activeTaskId ? TASKS.find(t => t.id === activeTaskId) : null;
   document.getElementById('my-done-count').textContent  = myDoneCount;
   document.getElementById('my-active-name').textContent = active?.dept.split('–')[0].trim() ?? '–';
+}
+
+/* ────────────────────────────────────────────
+   ÆNDRING 1: AKUT FULLSCREEN MODAL
+──────────────────────────────────────────── */
+
+function showWorkerAkutModal(dept, msg, taskId) {
+  pendingAkutTaskId = taskId;
+  document.getElementById('akut-worker-dept').textContent = dept;
+  document.getElementById('akut-worker-msg').textContent  = msg || 'Akut prøvetagning påkrævet';
+  document.getElementById('modal-akut-worker').classList.add('open');
+}
+
+function acceptAkutKald() {
+  document.getElementById('modal-akut-worker').classList.remove('open');
+  if (pendingAkutTaskId !== null) {
+    takeTask(pendingAkutTaskId);
+    pendingAkutTaskId = null;
+  }
+}
+
+function forwardAkutKald() {
+  document.getElementById('modal-akut-worker').classList.remove('open');
+  console.log('[AkutKald] Videresendt — prøvetager optaget:', currentUser);
+  toast('Akut kald videresendt', 'Kaldet er sendt videre til andre prøvetagere.', 'amber');
+  pendingAkutTaskId = null;
+}
+
+/* ────────────────────────────────────────────
+   ÆNDRING 5: OPGAVEDETALJE MODAL
+──────────────────────────────────────────── */
+
+function openTaskDetail(id) {
+  const t = TASKS.find(x => x.id === id);
+  if (!t) return;
+
+  document.getElementById('task-detail-badge').innerHTML =
+    `<span class="badge ${PRIO_BADGE_W[t.prio]}" style="font-size:.8125rem;padding:.25rem .625rem;">${PRIO_LABEL_W[t.prio]}</span>`;
+  document.getElementById('task-detail-title').textContent = t.dept;
+  document.getElementById('task-detail-type').textContent  = t.type;
+
+  const bodyEl = document.getElementById('task-detail-body');
+  bodyEl.innerHTML = `
+    <div class="task-detail-grid">
+      <div class="task-detail-item">
+        <div class="label">Deadline</div>
+        <div style="font-weight:600;">${t.deadline}</div>
+      </div>
+      <div class="task-detail-item">
+        <div class="label">Status</div>
+        <div style="font-weight:600;">${t.status === 'open' ? 'Afventer' : t.status === 'taken' ? 'Taget' : 'Færdig'}</div>
+      </div>
+      ${t.assignee ? `<div class="task-detail-item"><div class="label">Tildelt til</div><div style="font-weight:600;">${t.assignee}</div></div>` : ''}
+      <div class="task-detail-item">
+        <div class="label">Oprettet</div>
+        <div style="font-weight:600;">${t.time}</div>
+      </div>
+    </div>
+    ${t.note ? `<div class="wtc-note" style="margin-top:.75rem;">📝 ${t.note}</div>` : ''}`;
+
+  const footerEl = document.getElementById('task-detail-footer');
+  const isOwn = t.assignee && t.assignee === currentWorkerShortName();
+  if (t.status === 'open') {
+    footerEl.innerHTML = `
+      <button class="btn btn-primary" onclick="closeModal('modal-task-detail');takeTask(${t.id})">Tag opgave</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-task-detail')">Luk</button>`;
+  } else if (isOwn && t.status === 'taken') {
+    footerEl.innerHTML = `
+      <button class="btn btn-primary" onclick="closeModal('modal-task-detail');openWorkerDoneModal(${t.id})">Markér færdig</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-task-detail')">Luk</button>`;
+  } else {
+    footerEl.innerHTML = `<button class="btn btn-secondary" onclick="closeModal('modal-task-detail')">Luk</button>`;
+  }
+
+  openModal('modal-task-detail');
 }

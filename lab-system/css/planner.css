@@ -339,3 +339,129 @@ body.dev-phone-preview .activity-duration {
   color: var(--gray-300);
   font-size: .875rem;
 }
+
+/* ────────────────────────────
+   ÆNDRING 2: KLIKBARE STAT-KORT
+──────────────────────────── */
+.stat-card-clickable {
+  cursor: pointer;
+  user-select: none;
+}
+.stat-card-clickable:hover {
+  border-color: var(--blue-500);
+  box-shadow: var(--shadow-md);
+}
+.stat-click-hint {
+  font-size: .5625rem;
+  color: var(--gray-300);
+  margin-left: .125rem;
+  transition: color .15s;
+}
+.stat-card-clickable:hover .stat-click-hint {
+  color: var(--blue-500);
+}
+
+.hdr-patient-link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--gray-300);
+  transition: color .15s, text-decoration-color .15s;
+}
+.hdr-patient-link:hover {
+  color: var(--blue-600);
+  text-decoration-color: var(--blue-400);
+}
+
+/* Afdelingsfordeling list */
+.dept-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+.dept-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .5rem .75rem;
+  border-radius: var(--r-sm);
+  font-size: .8125rem;
+  transition: background .1s;
+}
+.dept-breakdown-row:hover {
+  background: var(--gray-50);
+}
+.dept-breakdown-name {
+  color: var(--gray-700);
+  font-weight: 500;
+}
+.dept-breakdown-count {
+  font-weight: 700;
+  color: var(--gray-900);
+  min-width: 2rem;
+  text-align: right;
+}
+
+/* ────────────────────────────
+   ÆNDRING 4: GRUPPETILDELING
+──────────────────────────── */
+.assign-mode-tabs {
+  display: flex;
+  gap: .25rem;
+  background: var(--gray-100);
+  border-radius: var(--r);
+  padding: .25rem;
+  margin-bottom: 1rem;
+}
+.assign-mode-tab {
+  flex: 1;
+  font-family: inherit;
+  font-size: .75rem;
+  font-weight: 600;
+  padding: .375rem .5rem;
+  border-radius: var(--r-sm);
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--gray-500);
+  transition: background .15s, color .15s;
+  text-align: center;
+}
+.assign-mode-tab.active {
+  background: var(--white);
+  color: var(--gray-900);
+  box-shadow: var(--shadow-xs);
+}
+.assign-group-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: .5rem;
+}
+.assign-group-task-item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .375rem .5rem;
+  border-radius: var(--r-sm);
+  font-size: .8125rem;
+  color: var(--gray-700);
+  transition: background .1s;
+}
+.assign-group-task-item:hover {
+  background: var(--gray-50);
+}
+.assign-group-task-item input[type="checkbox"] {
+  accent-color: var(--blue-600);
+}
+.assign-group-empty {
+  padding: 1rem;
+  text-align: center;
+  color: var(--gray-400);
+  font-size: .8125rem;
+}
