@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════
-   planner.css  –  Login + Planner page styles
-   LabSystem · Herlev Hospital
+   planner.css  –  Stilarter til login og planlæggersiden
+   LabSystem · Hillerød Hospital
    ═══════════════════════════════════════════ */
 
 /* ────────────────────────────
-   LOGIN
+   INDLOGNING
 ──────────────────────────── */
 #view-login {
   min-height: 100vh;
@@ -64,13 +64,13 @@
 .login-note   { font-size: .6875rem; color: var(--gray-400); text-align: center; margin-top: 1rem; line-height: 1.55; }
 
 /* ────────────────────────────
-   PLANNER PAGE
+   PLANLÆGGERSIDEN
 ──────────────────────────── */
 .planner-page-header { margin-bottom: 1.5rem; animation: page-in .4s var(--ease) both; }
 .planner-page-header h1 { font-size: 1.5rem; font-weight: 800; color: var(--gray-900); letter-spacing: -.02em; }
 .planner-page-header p  { font-size: .8125rem; color: var(--gray-400); margin-top: .25rem; }
 
-/* Stat grid */
+/* Statistik-kortene giver et hurtigt overblik over dagens belastning. */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -97,7 +97,7 @@
 .sv-green  { color: var(--green-500); }
 .sv-amber  { color: var(--amber-500); }
 
-/* Planner layout grid */
+/* Gitteret deler siden i en opgaveliste og en højre kolonne med handlinger. */
 .planner-grid {
   display: grid;
   grid-template-columns: 1fr 320px;
@@ -106,7 +106,7 @@
   animation: page-in .4s var(--ease) .1s both;
 }
 
-/* Task rows */
+/* Hver række repræsenterer én opgave med status, prioritet og handlinger. */
 .task-list { display: flex; flex-direction: column; gap: .5rem; }
 
 .task-row {
@@ -142,7 +142,7 @@
 .task-status-col  { flex-shrink: 0; }
 .task-actions-col { display: flex; gap: .375rem; flex-shrink: 0; }
 
-/* Filter tabs */
+/* Filtrene lader planlæggeren fokusere på en bestemt type opgaver. */
 .filter-tabs {
   display: flex; gap: .25rem;
   background: var(--gray-100); border-radius: var(--r); padding: .25rem;
@@ -155,10 +155,10 @@
 }
 .filter-tab.active { background: var(--white); color: var(--gray-900); box-shadow: var(--shadow-xs); }
 
-/* Right column */
+/* Højre kolonne samler oprettelse af opgaver og personaleoversigten. */
 .right-col { display: flex; flex-direction: column; gap: 1rem; }
 
-/* Create task card */
+/* Kortet her bruges til at oprette nye opgaver direkte fra oversigten. */
 .create-card   { padding: 1.25rem; }
 .create-fields { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 1rem; }
 .create-row-2  { display: grid; grid-template-columns: 1fr 1fr; gap: .625rem; }
@@ -176,7 +176,7 @@
 .prio-pill.p-udskr.sel  { background: var(--amber-50);  border-color: var(--amber-500);  color: var(--amber-600); }
 .prio-pill.p-rutine.sel { background: var(--gray-100);  border-color: var(--gray-400);   color: var(--gray-600); }
 
-/* Staff card */
+/* Personale-kortet viser hvem der er til rådighed, og hvor de hører til. */
 .staff-card  { padding: 1.25rem; }
 .staff-list  { display: flex; flex-direction: column; gap: .375rem; margin-top: .75rem; }
 .staff-row {
@@ -191,7 +191,7 @@
 .staff-dept { font-size: .6875rem; color: var(--gray-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ────────────────────────────
-   RESPONSIVE — PLANNER
+   RESPONSIV ADFÆRD FOR PLANLÆGGER
 ──────────────────────────── */
 @media (max-width: 1024px) {
   .planner-grid { grid-template-columns: 1fr; }
@@ -341,7 +341,7 @@ body.dev-phone-preview .activity-duration {
 }
 
 /* ────────────────────────────
-   ÆNDRING 2: KLIKBARE STAT-KORT
+   ÆNDRING 2: KLIKBARE STATISTIKKORT
 ──────────────────────────── */
 .stat-card-clickable {
   cursor: pointer;
@@ -374,7 +374,7 @@ body.dev-phone-preview .activity-duration {
   text-decoration-color: var(--blue-400);
 }
 
-/* Afdelingsfordeling list */
+/* Listen viser, hvordan patienter eller opgaver fordeler sig på tværs af afdelinger. */
 .dept-breakdown-list {
   display: flex;
   flex-direction: column;

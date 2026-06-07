@@ -1,47 +1,48 @@
 /**
- * worker.js  –  Worker (prøvetager) page: state & rendering
+ * worker.js  –  Logik til prøvetagerens side
+ * Filen styrer prøvetagerens tilstand, opgaver og visning.
  * LabSystem · Hillerød Hospital
  */
 
 'use strict';
 
 /* ────────────────────────────────────────────
-   STATE
+   TILSTAND
 ──────────────────────────────────────────── */
 
 let workerBusy        = false;
 let activeTaskId      = null;
 let myDoneCount       = 0;
-let wFilterMode       = 'alle'; // 'alle' | 'akut' | 'fremsk' | 'rutine'
-let activeTaskStartTime = null; // Feature 4: timestamp when task was taken
-let timerInterval     = null;   // Feature 4: setInterval handle
-let workerDoneTarget  = null;   // id of task pending done-confirmation
-let pendingAkutTaskId = null;   // task id from an incoming akut kald
+let wFilterMode       = 'alle'; // Angiver hvilket opgavefilter prøvetageren har valgt: 'alle', 'akut', 'fremsk' eller 'rutine'
+let activeTaskStartTime = null; // Gemmer starttidspunktet for den aktive opgave, så varigheden kan vises løbende
+let timerInterval     = null;   // Gemmer intervallet, så timeren kan stoppes igen på det rigtige tidspunkt
+let workerDoneTarget  = null;   // Id på den opgave, som venter på at blive bekræftet som færdig
+let pendingAkutTaskId = null;   // Id på den akutte opgave, der lige nu vises i akut-modalen
 
 const PRIO_ORDER_W = { akut: 0, fremsk: 1, udskr: 2, rutine: 3 };
 const PRIO_LABEL_W = { akut: 'Akut', fremsk: 'Fremskyndet', udskr: 'Udskrivning', rutine: 'Rutine' };
 const PRIO_BADGE_W = { akut: 'badge-red', fremsk: 'badge-orange', udskr: 'badge-amber', rutine: 'badge-gray' };
 
 /**
- * Department codes this worker can service.
- * In production, load from the logged-in user's profile.
+ * Liste over de afdelingskoder, som prøvetageren må håndtere.
+ * I en rigtig løsning bør de hentes fra den indloggede brugers profil.
  * @type {string[]}
  */
 let myCompetences = [];
 
 /* ────────────────────────────────────────────
-   INIT  (called by app.js after login)
+   INITIALISERING
 ──────────────────────────────────────────── */
 
 /**
- * Initialise the worker page for a specific user.
- * @param {string} userName  - e.g. 'Sofia A.'
+ * Klargør prøvetagersiden til den bruger, der lige er logget ind.
+ * @param {string} userName - Forventes at ligne 'Sofia A.'
  */
 function initWorkerPage(userName) {
   const staffMember = STAFF.find(s => s.name === userName);
   myCompetences = staffMember?.competences ?? [];
 
-  // Reset state
+  // Start fra en ren tilstand, så data fra en tidligere bruger ikke hænger ved.
   workerBusy   = false;
   activeTaskId = null;
   myDoneCount  = 0;
@@ -53,18 +54,18 @@ function initWorkerPage(userName) {
 }
 
 /* ────────────────────────────────────────────
-   RENDERING
+   VISNING
 ──────────────────────────────────────────── */
 
 function renderWorkerTasks() {
   const list = document.getElementById('worker-task-list');
 
-  // Feature 2: count all non-done tasks before competence filter
+  // Tæl først alle ikke-færdige opgaver, så vi senere kan forklare hvor mange der filtreres væk.
   const totalOpen = TASKS.filter(t => t.status !== 'done').length;
 
   let filtered = TASKS.filter(t => {
     if (t.status === 'done') return false;
-    // Only show tasks for departments this worker is competent in
+    // Skjul opgaver fra afdelinger, som prøvetageren ikke har kompetence til at dække.
     if (myCompetences.length > 0 && !myCompetences.some(c => t.dept.startsWith(c))) return false;
     if (wFilterMode === 'akut')   return t.prio === 'akut';
     if (wFilterMode === 'fremsk') return t.prio === 'fremsk';
@@ -74,7 +75,7 @@ function renderWorkerTasks() {
 
   filtered.sort((a, b) => PRIO_ORDER_W[a.prio] - PRIO_ORDER_W[b.prio]);
 
-  // Feature 2: show/hide competence info chip
+  // Vis en hjælpetekst, når nogle opgaver skjules på grund af manglende kompetencer.
   const infoEl = document.getElementById('worker-competence-info');
   if (infoEl) {
     const hiddenCount = totalOpen - filtered.length;
@@ -150,7 +151,7 @@ function renderWorkerTasks() {
 }
 
 /* ────────────────────────────────────────────
-   WORKER ACTIONS
+   HANDLINGER FOR PRØVETAGEREN
 ──────────────────────────────────────────── */
 
 function takeTask(id) {
@@ -166,7 +167,7 @@ function takeTask(id) {
   activeTaskId = id;
   activeTaskStartTime = Date.now();
 
-  // Feature 4: start live timer
+  // Start den løbende timer, så prøvetageren kan se hvor længe opgaven har været aktiv.
   clearInterval(timerInterval);
   timerInterval = setInterval(updateActiveTimer, 1000);
 
@@ -203,14 +204,14 @@ function workerDone(id) {
 
   if (activeTaskId === id) {
     activeTaskId = null;
-    clearInterval(timerInterval); // Feature 4
+    clearInterval(timerInterval); // Stop timeren, fordi den aktive opgave netop er afsluttet.
     timerInterval = null;
     activeTaskStartTime = null;
     setFreeUI();
   }
   renderWorkerTasks();
-  updateStats();         // also update planner stats
-  renderActivityLog();   // update planner activity log
+  updateStats();         // Opdater også planlæggerens overordnede nøgletal.
+  renderActivityLog();   // Tilføj afslutningen til aktivitetsloggen på planlæggersiden.
   toast('Opgave færdig 🎉', `${t.dept} er markeret som færdig.`, 'green');
 }
 
@@ -224,7 +225,7 @@ function reqHelp(id) {
 }
 
 /* ────────────────────────────────────────────
-   STATUS UI
+   STATUSVISNING
 ──────────────────────────────────────────── */
 
 function setWorkerBusyUI(t) {
@@ -241,7 +242,7 @@ function setWorkerBusyUI(t) {
 
 function setFreeUI() {
   workerBusy = false;
-  clearInterval(timerInterval); // Feature 4
+  clearInterval(timerInterval); // Sørg for at timeren stopper, når prøvetageren ikke længere har en aktiv opgave.
   timerInterval = null;
   activeTaskStartTime = null;
   const timerEl = document.getElementById('atb-timer');
@@ -271,7 +272,7 @@ function setWorkerManualBusy() {
 }
 
 /* ────────────────────────────────────────────
-   FEATURE 4 – LIVE TIMER
+   LIVE-TIMER FOR AKTIV OPGAVE
 ──────────────────────────────────────────── */
 
 function updateActiveTimer() {
@@ -284,7 +285,7 @@ function updateActiveTimer() {
 }
 
 /* ────────────────────────────────────────────
-   FILTER
+   FILTRERING
 ──────────────────────────────────────────── */
 
 function setWFilter(f, el) {
@@ -295,10 +296,10 @@ function setWFilter(f, el) {
 }
 
 /* ────────────────────────────────────────────
-   HELPERS
+   HJÆLPEFUNKTIONER
 ──────────────────────────────────────────── */
 
-/** @returns {string} Short display name, e.g. 'Sofia A.' */
+/** @returns {string} Returnerer et kort visningsnavn, for eksempel 'Sofia A.' */
 function currentWorkerShortName() {
   const parts = currentUser.split(' ');
   return parts[0] + ' ' + (parts[1]?.[0] ?? '') + '.';
@@ -311,7 +312,7 @@ function updateWorkerStats() {
 }
 
 /* ────────────────────────────────────────────
-   ÆNDRING 1: AKUT FULLSCREEN MODAL
+   ÆNDRING 1: FULDSKÆRMSMODAL TIL AKUTTE KALD
 ──────────────────────────────────────────── */
 
 function showWorkerAkutModal(dept, msg, taskId) {
@@ -337,7 +338,7 @@ function forwardAkutKald() {
 }
 
 /* ────────────────────────────────────────────
-   ÆNDRING 5: OPGAVEDETALJE MODAL
+   ÆNDRING 5: MODAL MED OPGAVEDETALJER
 ──────────────────────────────────────────── */
 
 function openTaskDetail(id) {

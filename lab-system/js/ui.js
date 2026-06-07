@@ -1,25 +1,26 @@
 /**
- * ui.js  –  Shared UI utilities: Toast & Modal
+ * ui.js  –  Fælles hjælpefunktioner til brugerfladen
+ * Filen samler logik til små statusbeskeder og modaler, som bruges flere steder i systemet.
  * LabSystem · Hillerød Hospital
  */
 
 'use strict';
 
 /* ────────────────────────────────────────────
-   TOAST
+   SMÅ STATUSBESKEDER
 ──────────────────────────────────────────── */
 
 const TOAST_BORDER = { blue: '',               red: ' toast-red', green: ' toast-green', amber: ' toast-amber' };
 const TOAST_ICON   = { blue: 'ℹ️', red: '⚠️', green: '✓',        amber: '⚡' };
 
 /**
- * Show a toast notification.
+ * Viser en lille besked i hjørnet af skærmen.
  * @param {string} title
  * @param {string} [body]
  * @param {'blue'|'red'|'green'|'amber'} [type]
- * @param {Function|null} [undoCallback]  – If provided, shows a "Fortryd" button.
- *   The caller is responsible for deferring the actual action; calling undoCallback
- *   signals that the user wants to cancel it.
+ * @param {Function|null} [undoCallback] – Hvis funktionen findes, vises en "Fortryd"-knap.
+ *   Den kaldende kode skal selv vente med at låse handlingen fast; et kald til
+ *   undoCallback betyder blot, at brugeren vil annullere den planlagte ændring.
  */
 function toast(title, body = '', type = 'blue', undoCallback = null) {
   const container = document.getElementById('toast-container');
@@ -42,10 +43,10 @@ function toast(title, body = '', type = 'blue', undoCallback = null) {
   container.appendChild(el);
 
   if (undoCallback) {
-    // Store callback on element for the undo button
+    // Gem fortryd-handlingen sammen med den viste besked, så den rigtige funktion kaldes ved klik.
     const uid = Date.now() + Math.random();
     el.dataset.uid = uid;
-    // Re-render undo button with correct id now that el is in DOM
+    // Knyt først klikhåndteringen til knappen, når elementet faktisk findes i DOM'en.
     const undoBtn = el.querySelector('.toast-undo-btn');
     if (undoBtn) {
       undoBtn.addEventListener('click', () => {
@@ -60,7 +61,7 @@ function toast(title, body = '', type = 'blue', undoCallback = null) {
 }
 
 /**
- * Dismiss (animate out + remove) a toast element.
+ * Fjerner beskeden ved først at afspille dens fade-out-animation.
  * @param {HTMLElement} el
  */
 function dismissToast(el) {
@@ -70,11 +71,11 @@ function dismissToast(el) {
 }
 
 /* ────────────────────────────────────────────
-   MODAL
+   MODALER
 ──────────────────────────────────────────── */
 
 /**
- * Open a modal by its DOM id.
+ * Åbner en modal ud fra dens DOM-id.
  * @param {string} id
  */
 function openModal(id) {
@@ -82,14 +83,14 @@ function openModal(id) {
 }
 
 /**
- * Close a modal by its DOM id.
+ * Lukker en modal ud fra dens DOM-id.
  * @param {string} id
  */
 function closeModal(id) {
   document.getElementById(id)?.classList.remove('open');
 }
 
-// Close modal on backdrop click
+// Luk modalen, når brugeren klikker uden for selve indholdsboksen.
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.modal-backdrop').forEach(mb => {
     mb.addEventListener('click', e => {
@@ -98,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Block ESC for the akut worker modal
+// For akut-modalen blokeres Escape, så den kræver et tydeligt aktivt valg fra brugeren.
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     const akutModal = document.getElementById('modal-akut-worker');

@@ -1,23 +1,23 @@
 /**
- * app.js  –  Application entry point
- * Handles login, page routing, and the live clock.
+ * app.js  –  Indgangspunkt for applikationen
+ * Filen styrer indlogning, skift mellem sider og uret i toplinjen.
  * LabSystem · Hillerød Hospital
  */
 
 'use strict';
 
 /* ────────────────────────────────────────────
-   GLOBAL APP STATE
+   FÆLLES APP-TILSTAND
 ──────────────────────────────────────────── */
 
-let currentRole = 'planner'; // 'planner' | 'worker'
-let currentUser = '';        // Full name of the logged-in user
+let currentRole = 'planner'; // Gemmer den valgte rolle internt: 'planner' eller 'worker'
+let currentUser = '';        // Gemmer navnet på den bruger, der lige nu er logget ind
 
 const DEV_PREVIEW_STORAGE_KEY = 'labSystem.devPhonePreview';
 const DEV_PREVIEW_HOSTS = new Set(['', '127.0.0.1', '::1', 'localhost']);
 
 /* ────────────────────────────────────────────
-   DEV PREVIEW
+   UDVIKLERVISNING
 ──────────────────────────────────────────── */
 
 function shouldShowDevPreviewToggle() {
@@ -39,7 +39,7 @@ function writeDevPreviewPreference(enabled) {
   try {
     window.localStorage.setItem(DEV_PREVIEW_STORAGE_KEY, enabled ? '1' : '0');
   } catch {
-    // Ignore storage issues in restrictive browser contexts.
+    // Hvis browseren blokerer lagring, springer vi stille over uden at stoppe resten af appen.
   }
 }
 
@@ -81,11 +81,11 @@ function initDevPreview() {
 }
 
 /* ────────────────────────────────────────────
-   LOGIN
+   INDLOGNING
 ──────────────────────────────────────────── */
 
 /**
- * Toggle between planner and worker role tiles.
+ * Markerer den valgte rolle i indlogningsvisningen og opdaterer brugerlisten.
  * @param {'planner'|'worker'} role
  */
 function setRole(role) {
@@ -99,20 +99,20 @@ function setRole(role) {
     : WORKER_USERS.map(u  => `<option>${u.name}</option>`).join('');
 }
 
-/** Handle the login button click. */
+/** Logger brugeren ind og viser den side, der passer til den valgte rolle. */
 function doLogin() {
   currentUser = document.getElementById('login-user-sel').value;
 
-  // Derive initials and avatar class
+  // Udled initialer og vælg den rigtige avatar-klasse ud fra det valgte navn.
   const parts    = currentUser.split(' ');
   const initials = parts.slice(0, 2).map(p => p[0]).join('').toUpperCase();
   const short    = `${parts[0]} ${parts[1] ?? ''}`.trim();
 
-  // Switch views
+  // Skjul indlogningen og vis selve applikationen.
   document.getElementById('view-login').style.display = 'none';
   document.getElementById('view-app').style.display   = 'block';
 
-  // Topbar
+  // Opdater toplinjen, så den viser den aktuelle bruger.
   document.getElementById('topbar-av').textContent    = initials;
   document.getElementById('topbar-uname').textContent = short;
 
@@ -131,12 +131,12 @@ function doLogin() {
     document.getElementById('topbar-av').className       = `topbar-avatar ${staffMember?.avClass ?? 'av-blue'}`;
     document.getElementById('topbar-page-label').textContent = 'Prøvetager';
 
-    // Populate worker profile sidebar
+    // Udfyld prøvetagerens profilfelt i venstre side.
     document.getElementById('worker-av-large').textContent = initials;
     document.getElementById('worker-av-large').className   = `worker-av-large ${staffMember?.avClass ?? 'av-blue'}`;
     document.getElementById('worker-full-name').textContent = short;
 
-    // Populate competence tags
+    // Vis de kompetencer, som den valgte prøvetager har.
     const tagRow = document.getElementById('comp-tag-row');
     tagRow.innerHTML = (staffMember?.competences ?? [])
       .map(c => `<span class="comp-tag">${c}</span>`).join('');
@@ -148,22 +148,22 @@ function doLogin() {
   startClock();
 }
 
-/** Handle the logout button. */
+/** Logger brugeren ud og nulstiller visningen tilbage til indlogningssiden. */
 function doLogout() {
   document.getElementById('view-app').style.display   = 'none';
   document.getElementById('view-login').style.display = 'flex';
   stopClock();
 
-  // Reset role selector to planner defaults
+  // Gå tilbage til standardvalget, så næste indlogning starter som planlægger.
   setRole('planner');
 }
 
 /* ────────────────────────────────────────────
-   PAGE ROUTING
+   SIDESKIFT
 ──────────────────────────────────────────── */
 
 /**
- * Show a specific page within the app shell.
+ * Viser præcis én underside i app-rammen og skjuler den anden.
  * @param {'planner-page'|'worker-page'} pageId
  */
 function showPage(pageId) {
@@ -173,7 +173,7 @@ function showPage(pageId) {
 }
 
 /* ────────────────────────────────────────────
-   LIVE CLOCK
+   KLOKKE I TOPLINJEN
 ──────────────────────────────────────────── */
 
 let _clockInterval = null;
@@ -195,16 +195,16 @@ function stopClock() {
 }
 
 /* ────────────────────────────────────────────
-   BOOTSTRAP
+   OPSTART
 ──────────────────────────────────────────── */
 
 document.addEventListener('DOMContentLoaded', () => {
   initDevPreview();
 
-  // Set today's date in planner header
+  // Skriv dags dato ind i overskriften på planlæggerens side.
   document.getElementById('planner-date').textContent =
     new Date().toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  // Pre-populate login user select with planner users
+  // Start med at vise planlægger-brugerne i indlogningsfeltet.
   setRole('planner');
 });

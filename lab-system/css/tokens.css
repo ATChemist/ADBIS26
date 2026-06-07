@@ -1,11 +1,11 @@
 /* ═══════════════════════════════════════════
-   tokens.css  –  Design tokens & base styles
+   tokens.css  –  Design-tokens og grundlæggende stilarter
    LabSystem · Hillerød Hospital
    ═══════════════════════════════════════════ */
 
-/* ── CSS Custom Properties ── */
+/* ── CSS-variabler ── */
 :root {
-  /* Colour palette */
+  /* Grundfarver, som resten af brugerfladen bygger videre på. */
   --white:        #FFFFFF;
   --gray-50:      #F8F9FB;
   --gray-100:     #F0F2F5;
@@ -41,7 +41,7 @@
   --orange-100:   #FFEDD5;
   --orange-500:   #F97316;
 
-  /* Semantic aliases */
+  /* Semantiske aliaser gør det lettere at bruge farver efter formål frem for hex-koder. */
   --surface:          var(--white);
   --bg:               var(--gray-50);
   --border:           var(--gray-200);
@@ -49,25 +49,25 @@
   --text-secondary:   var(--gray-500);
   --accent:           var(--blue-600);
 
-  /* Border radii */
+  /* Fælles runding af hjørner, så komponenter får samme visuelle rytme. */
   --r-sm: 6px;
   --r:    10px;
   --r-lg: 16px;
   --r-xl: 24px;
 
-  /* Shadows */
+  /* Skygger bruges til at adskille lag og skabe dybde i fladen. */
   --shadow-xs: 0 1px 2px 0 rgba(0,0,0,.05);
   --shadow-sm: 0 1px 3px 0 rgba(0,0,0,.08), 0 1px 2px -1px rgba(0,0,0,.04);
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -2px rgba(0,0,0,.04);
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.04);
   --shadow-xl: 0 20px 25px -5px rgba(0,0,0,.08), 0 8px 10px -6px rgba(0,0,0,.04);
 
-  /* Motion */
+  /* Bevægelseskurver sørger for, at animationer føles ensartede. */
   --ease:     cubic-bezier(0.16, 1, 0.3, 1);
   --ease-std: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ── Reset ── */
+/* ── Grundnulstilling ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; }
 
@@ -80,14 +80,14 @@ body {
   min-height: 100vh;
 }
 
-/* ── Selection & Scrollbar ── */
+/* ── Markering og scrollbar ── */
 ::selection { background: var(--blue-100); color: var(--blue-700); }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
 
-/* ── Utility helpers ── */
+/* ── Hjælpeklasser ── */
 .hidden       { display: none !important; }
 .sr-only      { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
 .flex         { display: flex; }
@@ -98,7 +98,7 @@ body {
 .truncate     { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .col          { flex-direction: column; }
 
-/* ── Animations ── */
+/* ── Animationer ── */
 @keyframes page-in {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }

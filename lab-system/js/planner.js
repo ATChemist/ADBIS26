@@ -1,35 +1,36 @@
 /**
- * planner.js  –  Planner page: task management & rendering
+ * planner.js  –  Logik til planlæggerens side
+ * Filen styrer opgaver, tildeling og den visning, planlæggeren arbejder i.
  * LabSystem · Hillerød Hospital
  */
 
 'use strict';
 
 /* ────────────────────────────────────────────
-   STATE
+   TILSTAND
 ──────────────────────────────────────────── */
 
-/** @type {Task[]} Live task list (mutated in place) */
+/** @type {Task[]} Den aktuelle opgaveliste, som opdateres direkte i hukommelsen. */
 let TASKS = INITIAL_TASKS.map(t => ({ ...t }));
 
 let nextId        = INITIAL_TASKS.length + 1;
-let taskFilter    = 'all';   // 'all' | 'akut' | 'open' | 'done' | 'escalated'
+let taskFilter    = 'all';   // Aktivt filter i opgavelisten: 'all', 'akut', 'open', 'done' eller 'escalated'
 let selPrioVal    = 'rutine';
-let assignTarget  = null;    // task id awaiting assignment
-let deleteTarget  = null;    // task id awaiting delete confirmation
-let pendingAkutDept = null;  // dept stored while confirmation modal is open
-let pendingAkutMsg  = null;  // message stored while confirmation modal is open
-let assignMode      = 'single'; // 'single' | 'group'
+let assignTarget  = null;    // Id på den opgave, der lige nu er valgt til tildeling
+let deleteTarget  = null;    // Id på den opgave, der venter på slettebekræftelse
+let pendingAkutDept = null;  // Gemmer afdeling midlertidigt, mens akut-bekræftelsen er åben
+let pendingAkutMsg  = null;  // Gemmer beskeden midlertidigt, mens akut-bekræftelsen er åben
+let assignMode      = 'single'; // Angiver om modalens tildeling sker enkeltvis eller som gruppe: 'single' eller 'group'
 let remainingPatients = 197;
 
-/** Priority sort order */
+/** Bestemmer hvilken prioritet der skal ligge øverst i listerne. */
 const PRIO_ORDER = { akut: 0, fremsk: 1, udskr: 2, rutine: 3 };
 
 const PRIO_LABEL   = { akut: 'Akut', fremsk: 'Fremskyndet', udskr: 'Udskrivning', rutine: 'Rutine' };
 const PRIO_BADGE   = { akut: 'badge-red', fremsk: 'badge-orange', udskr: 'badge-amber', rutine: 'badge-gray' };
 
 /* ────────────────────────────────────────────
-   STATS
+   STATISTIK
 ──────────────────────────────────────────── */
 
 function updateStats() {
@@ -107,7 +108,7 @@ function openDeptBreakdown(category) {
 }
 
 /* ────────────────────────────────────────────
-   TASK LIST RENDERING
+   VISNING AF OPGAVELISTE
 ──────────────────────────────────────────── */
 
 function getFilteredTasks() {
@@ -149,7 +150,7 @@ function renderPlannerTasks() {
     const noteChip = t.note
       ? `<span class="task-note-chip">📝 ${t.note}</span>` : '';
 
-    // Feature 5: escalation badge for open tasks > 15 min
+    // Vis en tydelig markering, når en åben opgave har ventet mere end 15 minutter.
     const escalated = t.status === 'open' && minutesOpen(t) > 15;
     const escalationBadge = escalated
       ? `<span class="badge badge-amber">⏳ Afventer længe</span>` : '';
@@ -182,7 +183,7 @@ function renderPlannerTasks() {
 }
 
 /* ────────────────────────────────────────────
-   FILTER
+   FILTRERING
 ──────────────────────────────────────────── */
 
 function setFilter(f, el) {
@@ -193,14 +194,14 @@ function setFilter(f, el) {
 }
 
 /* ────────────────────────────────────────────
-   TASK ACTIONS
+   HANDLINGER PÅ OPGAVER
 ──────────────────────────────────────────── */
 
 function markDone(id) {
   const t = TASKS.find(x => x.id === id);
   if (!t) return;
 
-  // Optimistic UI — visually mark done immediately
+  // Opdater først skærmen med det samme, så brugeren oplever en hurtig reaktion.
   const prevStatus   = t.status;
   const prevAssignee = t.assignee;
   const prevCompletedAt = t.completedAt;
@@ -212,7 +213,7 @@ function markDone(id) {
   updateStats();
   renderActivityLog();
 
-  // Deferred commit with undo window (5 sec)
+  // Giv brugeren fem sekunder til at fortryde, før ændringen regnes som endelig.
   let committed = false;
   const undoTimer = setTimeout(() => { committed = true; }, 5000);
 
@@ -221,7 +222,7 @@ function markDone(id) {
     `${t.dept} · ${t.type}`,
     'green',
     () => {
-      // Undo: revert if not yet committed
+      // Hvis handlingen endnu ikke er låst fast, gendannes den tidligere tilstand.
       if (!committed) {
         clearTimeout(undoTimer);
         t.status      = prevStatus;
@@ -249,7 +250,7 @@ function confirmDelete() {
   const idx  = TASKS.findIndex(x => x.id === id);
   const snap = idx !== -1 ? { ...TASKS[idx] } : null;
 
-  // Optimistic removal
+  // Fjern opgaven med det samme i visningen, så sletningen føles øjeblikkelig.
   if (idx !== -1) TASKS.splice(idx, 1);
   deleteTarget = null;
   closeModal('modal-delete');
@@ -269,7 +270,7 @@ function confirmDelete() {
     () => {
       if (!committed) {
         clearTimeout(undoTimer);
-        // Re-insert at original position (or end)
+        // Læg opgaven tilbage dér, hvor den stod før, eller sidst i listen hvis placeringen ikke findes mere.
         const insertAt = Math.min(idx, TASKS.length);
         TASKS.splice(insertAt, 0, snap);
         renderPlannerTasks();
@@ -315,7 +316,7 @@ function openAssignModal(id) {
   document.getElementById('assign-desc').textContent =
     `Tildel: "${t.type}" på ${t.dept}`;
 
-  // Build dynamic staff options with state indicators
+  // Opbyg listen over prøvetagere dynamisk og vis deres aktuelle status direkte i valget.
   const sel = document.getElementById('assign-select');
   sel.innerHTML = '';
   STAFF.forEach(s => {
@@ -329,7 +330,7 @@ function openAssignModal(id) {
     sel.appendChild(opt);
   });
 
-  // Warning on change
+  // Vis en advarsel, hvis den valgte prøvetager allerede er optaget eller på pause.
   const warning = document.getElementById('assign-warning');
   const updateWarning = () => {
     const chosen = sel.options[sel.selectedIndex];
@@ -344,16 +345,16 @@ function openAssignModal(id) {
     }
   };
   sel.onchange = updateWarning;
-  updateWarning(); // run once on open
+  updateWarning(); // Kør også kontrollen med det samme, så modalen starter med korrekt advarselstilstand.
 
   openModal('modal-assign');
 }
 
 /* ────────────────────────────────────────────
-   ESCALATION HELPER (Feature 5)
+   HJÆLPER TIL VENTETIDSMARKERING
 ──────────────────────────────────────────── */
 
-/** Returns minutes since task.time (HH:MM), assuming same day. */
+/** Beregner hvor mange minutter der er gået siden opgaven blev oprettet samme dag. */
 function minutesOpen(task) {
   if (!task.time) return 0;
   const [hh, mm] = task.time.split(':').map(Number);
@@ -451,8 +452,8 @@ function confirmGroupAssign() {
 }
 
 /* ────────────────────────────────────────────
-   CREATE TASK
-──────────────────────────────────────────── */
+   OPRET OPGAVE
+─────────────────────────────────────────── */
 
 function selPrio(el, v) {
   selPrioVal = v;
@@ -474,7 +475,7 @@ function addTask() {
     deadline, note, status: assignee ? 'taken' : 'open', assignee, time,
   });
 
-  // Reset form
+  // Ryd de felter, som brugeren typisk forventer starter forfra efter oprettelse.
   document.getElementById('nt-note').value    = '';
   document.getElementById('nt-assign').value  = '';
   selPrio(document.querySelector('.prio-pill.p-rutine'), 'rutine');
@@ -536,7 +537,7 @@ function fireAkutKald() {
 }
 
 /* ────────────────────────────────────────────
-   STAFF LIST
+   OVERSIGT OVER PRØVETAGERE
 ──────────────────────────────────────────── */
 
 function renderStaff() {

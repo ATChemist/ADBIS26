@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LabSystem · Hillerød Hospital</title>
 
-  <!-- Preconnect for font performance -->
+  <!-- Opret tidlige forbindelser til fontservere, så skrifttyperne kan hentes hurtigere. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Stylesheets (load order matters) -->
+  <!-- Indlæs CSS-filer i denne rækkefølge, fordi de senere filer bygger videre på de tidligere. -->
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/planner.css">
@@ -19,7 +19,7 @@
 <body>
 
 <!-- ══════════════════════════════════════════
-     TOAST CONTAINER
+     CONTAINER TIL STATUSBESKEDER
 ══════════════════════════════════════════ -->
 <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
 
@@ -36,10 +36,10 @@
 
 
 <!-- ══════════════════════════════════════════
-     MODALS
+     MODALER
 ══════════════════════════════════════════ -->
 
-<!-- Assign -->
+<!-- Modal til tildeling af opgaver -->
 <div class="modal-backdrop" id="modal-assign" role="dialog" aria-modal="true" aria-labelledby="assign-title">
   <div class="modal-box" style="max-width:500px;">
     <div class="modal-header">
@@ -47,13 +47,13 @@
       <div class="modal-desc"  id="assign-desc">Vælg hvilken prøvetager der skal tildeles denne opgave.</div>
     </div>
 
-    <!-- Ændring 4: Toggle mellem enkelt og gruppe -->
+    <!-- Ændring 4: Her kan brugeren skifte mellem at tildele én opgave eller en hel gruppe opgaver. -->
     <div class="assign-mode-tabs">
       <button class="assign-mode-tab active" id="assign-tab-single" onclick="setAssignMode('single')">Tildel enkelt opgave</button>
       <button class="assign-mode-tab" id="assign-tab-group" onclick="setAssignMode('group')">Tildel afdeling som gruppe</button>
     </div>
 
-    <!-- Enkelt-tildeling (eksisterende) -->
+    <!-- Enkelt-tildeling bruges, når én konkret opgave skal gives til én prøvetager. -->
     <div class="modal-body" id="assign-single-body">
       <div class="field">
         <label class="label" for="assign-select">Prøvetager</label>
@@ -68,7 +68,7 @@
       </div>
     </div>
 
-    <!-- Gruppe-tildeling (nyt) -->
+    <!-- Gruppe-tildeling bruges, når flere åbne opgaver fra samme afdeling skal sendes samlet afsted. -->
     <div class="modal-body" id="assign-group-body" style="display:none;">
       <div class="field">
         <label class="label" for="assign-group-dept">Afdeling</label>
@@ -100,7 +100,7 @@
   </div>
 </div>
 
-<!-- Akut kald -->
+<!-- Modal til oprettelse af akut kald -->
 <div class="modal-backdrop" id="modal-akut" role="dialog" aria-modal="true" aria-labelledby="akut-title">
   <div class="modal-box">
     <div class="modal-header">
@@ -130,7 +130,7 @@
   </div>
 </div>
 
-<!-- Delete confirm -->
+<!-- Bekræftelse før en opgave slettes permanent -->
 <div class="modal-backdrop" id="modal-delete" role="dialog" aria-modal="true" aria-labelledby="delete-title">
   <div class="modal-box">
     <div class="modal-header">
@@ -144,7 +144,7 @@
   </div>
 </div>
 
-<!-- Akut kald confirm -->
+<!-- Ekstra bekræftelse, før akut kald sendes ud til alle aktive prøvetagere -->
 <div class="modal-backdrop" id="modal-akut-confirm" role="dialog" aria-modal="true">
   <div class="modal-box">
     <div class="modal-header">
@@ -158,7 +158,7 @@
   </div>
 </div>
 
-<!-- Worker done confirm -->
+<!-- Bekræftelse når prøvetageren markerer en opgave som færdig -->
 <div class="modal-backdrop" id="modal-worker-done" role="dialog" aria-modal="true" aria-labelledby="wdone-title">
   <div class="modal-box">
     <div class="modal-header">
@@ -172,7 +172,7 @@
   </div>
 </div>
 
-<!-- Ændring 1: Blokerende akut-modal for prøvetager -->
+<!-- Ændring 1: Fuldskærmsmodal, som kræver at prøvetageren aktivt tager stilling til et akut kald -->
 <div class="akut-fullscreen-modal" id="modal-akut-worker" role="alertdialog" aria-modal="true" aria-labelledby="akut-worker-title">
   <div class="akut-fullscreen-inner">
     <div class="akut-fullscreen-icon">
@@ -191,7 +191,7 @@
   </div>
 </div>
 
-<!-- Ændring 2: Afdelingsfordeling panel -->
+<!-- Ændring 2: Panel der forklarer, hvordan patienter eller opgaver fordeler sig på afdelinger -->
 <div class="modal-backdrop" id="modal-dept-breakdown" role="dialog" aria-modal="true" aria-labelledby="dept-breakdown-title">
   <div class="modal-box">
     <div class="modal-header">
@@ -207,7 +207,7 @@
   </div>
 </div>
 
-<!-- Ændring 5: Opgavedetalje-modal for prøvetager -->
+<!-- Ændring 5: Modal med flere detaljer om den valgte opgave for prøvetageren -->
 <div class="modal-backdrop" id="modal-task-detail" role="dialog" aria-modal="true" aria-labelledby="task-detail-title">
   <div class="modal-box" style="max-width:480px;">
     <div class="modal-header">
@@ -222,7 +222,7 @@
 
 
 <!-- ══════════════════════════════════════════
-     LOGIN VIEW
+     LOGINVISNING
 ══════════════════════════════════════════ -->
 <div id="dev-preview-root">
 <div id="view-login">
@@ -276,11 +276,11 @@
 
 
 <!-- ══════════════════════════════════════════
-     APP SHELL
+     APP-RAMME
 ══════════════════════════════════════════ -->
 <div id="view-app" style="display:none;">
 
-  <!-- Topbar -->
+  <!-- Den øverste bjælke samler systemnavn, klokke, brugerinformation og log ud-knap. -->
   <header class="topbar">
     <div class="topbar-brand">
       <div class="topbar-brand-icon">
@@ -302,7 +302,7 @@
   </header>
 
 
-  <!-- ── PLANNER PAGE ── -->
+  <!-- ── PLANLÆGGERSIDE ── -->
   <main id="planner-page" class="page-wrapper" style="display:none;">
 
     <div class="planner-page-header">
@@ -338,7 +338,7 @@
       </div>
     </div>
 
-    <!-- Stats -->
+    <!-- Statistik-kortene giver et hurtigt overblik over dagens vigtigste nøgletal. -->
     <div class="stat-grid">
       <div class="stat-card stat-card-clickable" onclick="openDeptBreakdown('patients')" title="Klik for afdelingsfordeling">
         <div class="stat-label">Patienter i dag <span class="stat-click-hint">▾</span></div>
@@ -367,10 +367,10 @@
       </div>
     </div>
 
-    <!-- Planner grid -->
+    <!-- Hovedopbygningen deler siden i opgaver til venstre og handlinger til højre. -->
     <div class="planner-grid">
 
-      <!-- Task list -->
+      <!-- Venstre kolonne viser opgaverne og de filtre, der kan bruges på dem. -->
       <div>
         <div class="section-hd">
           <div class="section-hd-left">
@@ -388,10 +388,10 @@
         <div class="task-list" id="planner-task-list"></div>
       </div>
 
-      <!-- Right column -->
+      <!-- Højre kolonne samler oprettelse af opgaver og oversigten over prøvetagere. -->
       <div class="right-col">
 
-        <!-- Create task -->
+        <!-- Kortet her bruges til at oprette en ny opgave direkte fra planlæggerens arbejdsflade. -->
         <div class="card create-card" id="create-section">
           <div class="section-hd" style="margin-bottom:.875rem;">
             <span class="section-title">Opret opgave</span>
@@ -466,7 +466,7 @@
           </button>
         </div>
 
-        <!-- Staff -->
+        <!-- Oversigt over prøvetagere og deres aktuelle status. -->
         <div class="card staff-card">
           <div class="section-hd" style="margin-bottom:0;">
             <span class="section-title">Prøvetagere</span>
@@ -475,10 +475,10 @@
           <div class="staff-list" id="staff-list"></div>
         </div>
 
-      </div><!-- /.right-col -->
-    </div><!-- /.planner-grid -->
+      </div><!-- slut på højre kolonne -->
+    </div><!-- slut på planlæggerens hovedlayout -->
 
-    <!-- Aktivitetslog -->
+    <!-- Aktivitetsloggen samler dagens afsluttede opgaver i tidsrækkefølge. -->
     <section class="activity-section">
       <div class="section-hd">
         <div class="section-hd-left">
@@ -492,14 +492,14 @@
       </div>
     </section>
 
-  </main><!-- /#planner-page -->
+  </main><!-- slut på planlæggersiden -->
 
 
-  <!-- ── WORKER PAGE ── -->
+  <!-- ── PRØVETAGERSIDE ── -->
   <main id="worker-page" class="page-wrapper" style="display:none;">
     <div class="worker-layout">
 
-      <!-- Sidebar -->
+      <!-- Venstre side viser profil, status, kompetencer og personlige tal. -->
       <aside class="worker-sidebar">
 
         <div class="card worker-profile-card">
@@ -540,9 +540,9 @@
 
       </aside>
 
-      <!-- Main content -->
+      <!-- Højre side viser aktive og tilgængelige opgaver. -->
       <div>
-        <!-- Active task banner -->
+        <!-- Banneret fremhæver den opgave, som prøvetageren er i gang med lige nu. -->
         <div class="active-task-banner" id="active-task-banner" style="display:none;">
           <div class="atb-left">
             <div class="atb-icon">🔬</div>
@@ -561,13 +561,13 @@
           </button>
         </div>
 
-        <!-- Ændring 3: Patient-tæller på worker-siden -->
+        <!-- Ændring 3: Patienttæller på prøvetagersiden giver et hurtigt billede af dagens restarbejde. -->
         <div class="worker-patient-counter" id="worker-patient-counter">
           <span class="wpc-label">Resterende patienter i dag:</span>
           <span class="wpc-value" id="worker-patient-count">197</span>
         </div>
 
-        <!-- Filters -->
+        <!-- Filtrene hjælper prøvetageren med at fokusere på bestemte typer opgaver. -->
         <div class="chip-row" id="worker-chip-row">
           <div class="chip active" onclick="setWFilter('alle',this)">Alle</div>
           <div class="chip" onclick="setWFilter('akut',this)">🔴 Akutte</div>
@@ -575,20 +575,20 @@
           <div class="chip" onclick="setWFilter('rutine',this)">⚪ Rutine / Udskrivning</div>
         </div>
 
-        <!-- Task list -->
+        <!-- Listen viser de opgaver, som prøvetageren aktuelt kan se og arbejde med. -->
         <div id="worker-competence-info" style="display:none; margin-bottom:.5rem;"></div>
         <div id="worker-task-list"></div>
       </div>
 
     </div>
-  </main><!-- /#worker-page -->
+  </main><!-- slut på prøvetagersiden -->
 
-</div><!-- /#view-app -->
-</div><!-- /#dev-preview-root -->
+</div><!-- slut på app-rammen -->
+</div><!-- slut på roden til udviklervisningen -->
 
 
 <!-- ══════════════════════════════════════════
-     SCRIPTS  (load order: data → ui → modules → app)
+     SCRIPTS  (indlæses i rækkefølgen data → ui → moduler → app, fordi de afhænger af hinanden)
 ══════════════════════════════════════════ -->
 <script src="data/data.js"></script>
 <script src="js/ui.js"></script>
